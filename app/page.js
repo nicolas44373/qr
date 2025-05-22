@@ -1,9 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
-import { Search, Filter, Phone, Mail, ShoppingBag, MessageCircle, Users, Store } from 'lucide-react'
-import Image from 'next/image'
+import React, { useState, useEffect } from 'react'
+import { Search, Filter, Phone, Mail, ShoppingBag, MessageCircle, Users, Store, Package } from 'lucide-react'
 
 export default function CatalogPage() {
   const [products, setProducts] = useState([])
@@ -14,9 +12,45 @@ export default function CatalogPage() {
   const [loading, setLoading] = useState(true)
   const [showContactMenu, setShowContactMenu] = useState(false)
 
-  // ✅ Función para formatear el precio
+  // Datos de ejemplo basados en tu lista
+  const sampleProducts = [
+    // Pollo
+    { id: 1, name: 'PATA MUSLO X 3 KG', price: 6500, pricePerKg: 2400, unit: 'caja', category: 'Pollo', categoryId: 1 },
+    { id: 2, name: 'FILET X 3KG', price: 23500, pricePerKg: 8500, unit: 'caja', category: 'Pollo', categoryId: 1 },
+    { id: 3, name: 'REBOZADOS X3KG', price: 13999, pricePerKg: null, unit: 'caja', category: 'Pollo', categoryId: 1 },
+    { id: 4, name: '2 POLLOS ENTEROS', price: 9999, pricePerKg: null, unit: 'pack', category: 'Pollo', categoryId: 1 },
+    { id: 5, name: 'SUPREMA', price: null, pricePerKg: 8000, unit: 'kg', category: 'Pollo', categoryId: 1 },
+    
+    // Otros productos
+    { id: 6, name: 'BANDEJA DE HUEVOS', price: 6900, pricePerKg: null, unit: 'bandeja', category: 'Otros', categoryId: 2 },
+    { id: 7, name: 'PAN RALLADO X 400GR', price: 599, pricePerKg: null, unit: 'paquete', category: 'Otros', categoryId: 2 },
+    
+    // Pescados
+    { id: 8, name: 'FILET DE MERLUZA', price: 6999, pricePerKg: null, unit: 'kg', category: 'Pescados', categoryId: 3 },
+    { id: 9, name: 'FILET DE ATUN', price: 9999, pricePerKg: null, unit: 'kg', category: 'Pescados', categoryId: 3 },
+    { id: 10, name: 'MILA DE MERLUZA TRADICIONAL', price: 8300, pricePerKg: null, unit: 'kg', category: 'Pescados', categoryId: 3 },
+    { id: 11, name: 'MILA DE MERLUZA FINAS HIERBAS', price: 8999, pricePerKg: null, unit: 'kg', category: 'Pescados', categoryId: 3 },
+    { id: 12, name: 'MILA DE MERLUZA A LA ROMANA', price: 8999, pricePerKg: null, unit: 'kg', category: 'Pescados', categoryId: 3 },
+    { id: 13, name: 'MEDALLON DE MERLUZA TRADICIONAL', price: 4500, pricePerKg: null, unit: 'kg', category: 'Pescados', categoryId: 3 },
+    { id: 14, name: 'MEDALLON DE MERLUZA EYQ', price: 5000, pricePerKg: null, unit: 'kg', category: 'Pescados', categoryId: 3 },
+    { id: 15, name: 'MEDALLON DE MERLUZA JYQ', price: 5000, pricePerKg: null, unit: 'kg', category: 'Pescados', categoryId: 3 },
+    { id: 16, name: 'MEDALLON DE MERLUZA ROQUEFORT', price: 6500, pricePerKg: null, unit: 'kg', category: 'Pescados', categoryId: 3 },
+    { id: 17, name: 'MEDALLON DE MERLUZA PRIMAVERA', price: 5000, pricePerKg: null, unit: 'kg', category: 'Pescados', categoryId: 3 },
+    { id: 18, name: 'MEDALLON DE MERLUZA CAPREZE', price: 5000, pricePerKg: null, unit: 'kg', category: 'Pescados', categoryId: 3 },
+    { id: 19, name: 'MEDALLON DE MERLUZA FINAS HIERBAS', price: 5000, pricePerKg: null, unit: 'kg', category: 'Pescados', categoryId: 3 },
+    { id: 20, name: 'FORMITAS DE MERLUZA', price: 4000, pricePerKg: null, unit: 'kg', category: 'Pescados', categoryId: 3 },
+    { id: 21, name: 'BASTONES DE MERLUZA', price: 4500, pricePerKg: null, unit: 'kg', category: 'Pescados', categoryId: 3 }
+  ]
+
+  const sampleCategories = [
+    { id: 1, name: 'Pollo' },
+    { id: 2, name: 'Otros' },
+    { id: 3, name: 'Pescados' }
+  ]
+
   const formatPrice = (price) => {
-    return new Intl.NumberFormat('es-ES', {
+    if (!price) return '-'
+    return new Intl.NumberFormat('es-AR', {
       style: 'currency',
       currency: 'ARS',
     }).format(price)
@@ -27,14 +61,14 @@ export default function CatalogPage() {
 
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(product =>
-        product.categories?.id.toString() === selectedCategory
+        product.categoryId.toString() === selectedCategory
       )
     }
 
     if (searchTerm) {
       filtered = filtered.filter(product =>
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.description?.toLowerCase().includes(searchTerm.toLowerCase())
+        product.category.toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
 
@@ -42,48 +76,21 @@ export default function CatalogPage() {
   }
 
   useEffect(() => {
-    fetchData()
+    // Simular carga de datos
+    setTimeout(() => {
+      setProducts(sampleProducts)
+      setCategories(sampleCategories)
+      setLoading(false)
+    }, 1000)
   }, [])
 
   useEffect(() => {
     filterProducts()
   }, [products, selectedCategory, searchTerm])
 
-  const fetchData = async () => {
-    try {
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name')
-
-      if (categoriesError) throw categoriesError
-
-      const { data: productsData, error: productsError } = await supabase
-        .from('products')
-        .select(`
-          *,
-          categories (
-            id,
-            name
-          )
-        `)
-        .eq('is_available', true)
-        .order('name')
-
-      if (productsError) throw productsError
-
-      setCategories(categoriesData || [])
-      setProducts(productsData || [])
-    } catch (error) {
-      console.error('Error fetching data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const handleWhatsAppContact = (type) => {
-    const phoneMinorista = +5493816516018
-    const phoneMayorista = +5493812224766
+    const phoneMinorista = '+5493816516018'
+    const phoneMayorista = '+5493812224766'
     
     const phone = type === 'minorista' ? phoneMinorista : phoneMayorista
     const message = `Hola! Me interesa obtener información sobre sus productos para ${type}.`
@@ -123,14 +130,14 @@ export default function CatalogPage() {
             </div>
             <div className="flex items-center space-x-6">
               <a 
-                href={`tel:${process.env.NEXT_PUBLIC_BUSINESS_PHONE}`}
+                href="tel:+5493816516018"
                 className="flex items-center space-x-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 px-4 py-2 rounded-full transition-all duration-200 font-medium"
               >
                 <Phone className="h-5 w-5" />
                 <span className="hidden sm:inline">Llamar</span>
               </a>
               <a 
-                href={`mailto:${process.env.NEXT_PUBLIC_BUSINESS_EMAIL}`}
+                href="mailto:info@alenort.com"
                 className="flex items-center space-x-2 bg-amber-100 hover:bg-amber-200 text-amber-700 px-4 py-2 rounded-full transition-all duration-200 font-medium"
               >
                 <Mail className="h-5 w-5" />
@@ -188,7 +195,7 @@ export default function CatalogPage() {
           </div>
         </div>
 
-        {/* Grid de productos */}
+        {/* Lista de productos */}
         {filteredProducts.length === 0 ? (
           <div className="text-center py-20">
             <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-12 max-w-md mx-auto border-2 border-yellow-200">
@@ -198,54 +205,94 @@ export default function CatalogPage() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            {filteredProducts.map((product) => (
-              <div key={product.id} className="group bg-white/90 backdrop-blur-sm rounded-3xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-2 border-yellow-100">
-                {/* Imagen del producto */}
-                <div className="relative h-56 bg-gradient-to-br from-yellow-100 to-amber-100 overflow-hidden">
-                  {product.image_url && !product.image_url.includes('via.placeholder.com') ? (
-                    <Image
-                      src={product.image_url}
-                      alt={product.name}
-                      fill
-                      className="object-cover group-hover:scale-110 transition-transform duration-300"
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                    />
-                  ) : (
-                    <div className="h-full flex items-center justify-center">
-                      <ShoppingBag className="h-20 w-20 text-yellow-300" />
+          <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-lg overflow-hidden border-2 border-yellow-200">
+            {/* Encabezado de la tabla */}
+            <div className="bg-gradient-to-r from-yellow-400 to-amber-400 px-8 py-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-white font-bold text-lg">
+                <div className="flex items-center space-x-2">
+                  <Package className="h-5 w-5" />
+                  <span>PRODUCTO</span>
+                </div>
+                <div className="text-center">CATEGORÍA</div>
+                <div className="text-center">PRECIO POR CAJA/UNIDAD</div>
+                <div className="text-center">PRECIO POR KG</div>
+              </div>
+            </div>
+
+            {/* Lista de productos */}
+            <div className="divide-y divide-yellow-100">
+              {filteredProducts.map((product, index) => (
+                <div 
+                  key={product.id} 
+                  className={`px-8 py-6 hover:bg-yellow-50 transition-colors duration-200 ${
+                    index % 2 === 0 ? 'bg-white' : 'bg-yellow-25'
+                  }`}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                    {/* Nombre del producto */}
+                    <div className="font-semibold text-gray-800 text-lg">
+                      {product.name}
                     </div>
-                  )}
-                  {/* Overlay con precio */}
-                  <div className="absolute top-4 right-4">
-                    <span className="bg-gradient-to-r from-yellow-400 to-amber-400 text-white font-bold px-3 py-1 rounded-full text-sm shadow-lg">
-                      {formatPrice(product.price)}
-                    </span>
+                    
+                    {/* Categoría */}
+                    <div className="text-center">
+                      <span className="inline-block bg-yellow-100 text-yellow-700 text-sm font-medium px-3 py-1 rounded-full border border-yellow-200">
+                        {product.category}
+                      </span>
+                    </div>
+                    
+                    {/* Precio por caja/unidad */}
+                    <div className="text-center">
+                      <span className="text-2xl font-bold text-green-600">
+                        {formatPrice(product.price)}
+                      </span>
+                      {product.unit && (
+                        <div className="text-sm text-gray-500 mt-1">por {product.unit}</div>
+                      )}
+                    </div>
+                    
+                    {/* Precio por kg */}
+                    <div className="text-center">
+                      <span className="text-2xl font-bold text-blue-600">
+                        {formatPrice(product.pricePerKg)}
+                      </span>
+                      {product.pricePerKg && (
+                        <div className="text-sm text-gray-500 mt-1">por kg</div>
+                      )}
+                    </div>
                   </div>
                 </div>
-
-                {/* Información del producto */}
-                <div className="p-6">
-                  <h3 className="text-xl font-bold text-gray-800 mb-3 line-clamp-2 group-hover:text-yellow-700 transition-colors">
-                    {product.name}
-                  </h3>
-                  
-                  {product.description && (
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-3 leading-relaxed">
-                      {product.description}
-                    </p>
-                  )}
-                  
-                  {product.categories && (
-                    <span className="inline-block bg-yellow-100 text-yellow-700 text-xs font-semibold px-3 py-1 rounded-full border border-yellow-200">
-                      {product.categories.name}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
+
+        {/* Información adicional */}
+        <div className="mt-12 bg-white/60 backdrop-blur-sm rounded-3xl p-8 border-2 border-yellow-200">
+          <div className="text-center">
+            <h3 className="text-2xl font-bold text-gray-800 mb-4">Información de Precios</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left max-w-4xl mx-auto">
+              <div className="bg-green-50 p-6 rounded-2xl border-2 border-green-200">
+                <h4 className="font-bold text-green-700 mb-2 flex items-center">
+                  <span className="bg-green-100 p-2 rounded-full mr-3">
+                    <Package className="h-5 w-5 text-green-600" />
+                  </span>
+                  Precio por Caja/Unidad
+                </h4>
+                <p className="text-green-600">Ideal para compras al por mayor. Mejor precio por cantidad.</p>
+              </div>
+              <div className="bg-blue-50 p-6 rounded-2xl border-2 border-blue-200">
+                <h4 className="font-bold text-blue-700 mb-2 flex items-center">
+                  <span className="bg-blue-100 p-2 rounded-full mr-3">
+                    <ShoppingBag className="h-5 w-5 text-blue-600" />
+                  </span>
+                  Precio por Kilogramo
+                </h4>
+                <p className="text-blue-600">Perfecto para compras menores y uso doméstico.</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </main>
 
       {/* Botón flotante de contacto */}
