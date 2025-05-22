@@ -13,7 +13,14 @@ export default function CatalogPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
 
-// ✅ Mover esta función arriba del useEffect
+  // ✅ Agregado: función para formatear el precio
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('es-ES', {
+      style: 'currency',
+      currency: 'EUR',
+    }).format(price)
+  }
+
   const filterProducts = () => {
     let filtered = products
 
@@ -37,14 +44,12 @@ export default function CatalogPage() {
     fetchData()
   }, [])
 
-  // ✅ No incluir `filterProducts` en las dependencias
   useEffect(() => {
     filterProducts()
   }, [products, selectedCategory, searchTerm])
 
   const fetchData = async () => {
     try {
-      // Obtener categorías
       const { data: categoriesData, error: categoriesError } = await supabase
         .from('categories')
         .select('*')
@@ -52,7 +57,6 @@ export default function CatalogPage() {
 
       if (categoriesError) throw categoriesError
 
-      // Obtener productos con categorías
       const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select(`
@@ -75,7 +79,6 @@ export default function CatalogPage() {
       setLoading(false)
     }
   }
-
 
   const handleWhatsAppOrder = (product) => {
     const message = `Hola! Me interesa el producto: ${product.name} - ${formatPrice(product.price)}`
@@ -177,21 +180,21 @@ export default function CatalogPage() {
             {filteredProducts.map((product) => (
               <div key={product.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
                 {/* Imagen del producto */}
-<div className="relative h-48 bg-gray-200">
-  {product.image_url && !product.image_url.includes('via.placeholder.com') ? (
-    <Image
-      src={product.image_url}
-      alt={product.name}
-      fill
-      className="object-cover"
-      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-    />
-  ) : (
-    <div className="h-full flex items-center justify-center text-gray-400">
-      <ShoppingBag className="h-16 w-16" />
-    </div>
-  )}
-</div>
+                <div className="relative h-48 bg-gray-200">
+                  {product.image_url && !product.image_url.includes('via.placeholder.com') ? (
+                    <Image
+                      src={product.image_url}
+                      alt={product.name}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                    />
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-gray-400">
+                      <ShoppingBag className="h-16 w-16" />
+                    </div>
+                  )}
+                </div>
 
                 {/* Información del producto */}
                 <div className="p-4">
