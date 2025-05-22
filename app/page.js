@@ -18,7 +18,7 @@ export default function CatalogPage() {
   const formatPrice = (price) => {
     return new Intl.NumberFormat('es-ES', {
       style: 'currency',
-      currency: 'EUR',
+      currency: 'ARS',
     }).format(price)
   }
 
@@ -83,7 +83,7 @@ export default function CatalogPage() {
 
   const handleWhatsAppContact = (type) => {
     const phoneMinorista = process.env.NEXT_PUBLIC_PHONE_MINORISTA
-    const phoneMayorista = process.env.NEXT_PUBLIC_PHONE_MAYORISTA
+    const phoneMayorista = 3812224766
     
     const phone = type === 'minorista' ? phoneMinorista : phoneMayorista
     const message = `Hola! Me interesa obtener información sobre sus productos para ${type}.`
