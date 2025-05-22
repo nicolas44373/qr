@@ -82,7 +82,7 @@ export default function CatalogPage() {
   }
 
   const handleWhatsAppContact = (type) => {
-    const phoneMinorista = process.env.NEXT_PUBLIC_PHONE_MINORISTA
+    const phoneMinorista = 3816516018
     const phoneMayorista = 3812224766
     
     const phone = type === 'minorista' ? phoneMinorista : phoneMayorista
