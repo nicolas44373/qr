@@ -13,13 +13,34 @@ export default function CatalogPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
 
+// ✅ Mover esta función arriba del useEffect
+  const filterProducts = () => {
+    let filtered = products
+
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(product =>
+        product.categories?.id.toString() === selectedCategory
+      )
+    }
+
+    if (searchTerm) {
+      filtered = filtered.filter(product =>
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
+
+    setFilteredProducts(filtered)
+  }
+
   useEffect(() => {
     fetchData()
   }, [])
 
+  // ✅ No incluir `filterProducts` en las dependencias
   useEffect(() => {
     filterProducts()
-  }, [products, selectedCategory, searchTerm,filterProducts])
+  }, [products, selectedCategory, searchTerm])
 
   const fetchData = async () => {
     try {
@@ -55,33 +76,6 @@ export default function CatalogPage() {
     }
   }
 
-  const filterProducts = () => {
-    let filtered = products
-
-    // Filtrar por categoría
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(product => 
-        product.categories?.id.toString() === selectedCategory
-      )
-    }
-
-    // Filtrar por búsqueda
-    if (searchTerm) {
-      filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.description?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    }
-
-    setFilteredProducts(filtered)
-  }
-
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('es-ES', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(price)
-  }
 
   const handleWhatsAppOrder = (product) => {
     const message = `Hola! Me interesa el producto: ${product.name} - ${formatPrice(product.price)}`
