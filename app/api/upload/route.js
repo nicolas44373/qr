@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { uploadImage } from '../../../lib/cloudinary'
 
 export async function POST(request) {

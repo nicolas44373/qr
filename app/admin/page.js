@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { Plus, Edit, Trash2, Save, X, Upload } from 'lucide-react'
+import { Plus, Edit, Trash2, Save, X } from 'lucide-react'
 
 export default function AdminPage() {
   const [products, setProducts] = useState([])
@@ -104,12 +104,12 @@ export default function AdminPage() {
 
     try {
       if (editingProduct) {
-        const { error } = await supabase
+        const {} = await supabase
           .from('products')
           .update(productData)
           .eq('id', editingProduct.id)
       } else {
-        const { error } = await supabase
+        const {} = await supabase
           .from('products')
           .insert([productData])
       }

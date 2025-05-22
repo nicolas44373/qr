@@ -19,7 +19,7 @@ export default function CatalogPage() {
 
   useEffect(() => {
     filterProducts()
-  }, [products, selectedCategory, searchTerm])
+  }, [products, selectedCategory, searchTerm,filterProducts])
 
   const fetchData = async () => {
     try {
