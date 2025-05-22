@@ -192,10 +192,10 @@ export default function CatalogPage() {
         Categoría: <span className="font-semibold">{product.category}</span>
       </div>
       <div className="text-sm text-yellow-700 font-medium">
-        Precio por caja/unidad: <span className="font-semibold">{formatPrice(product.price)}</span>
+        Precio por caja: <span className="font-semibold">{formatPrice(product.price)}</span>
       </div>
       <div className="text-sm text-yellow-700 font-medium">
-        Precio por kilo: <span className="font-semibold">{formatPrice(product.pricePerKg)}</span>
+        Precio: <span className="font-semibold">{formatPrice(product.pricePerKg)}</span>
       </div>
     </div>
 
