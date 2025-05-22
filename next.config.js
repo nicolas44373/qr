@@ -1,9 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ['via.placeholder.com'],
-    domains: ['calisa.com.ar'],
-    // Or use the newer remotePatterns (Next.js 12.3+)
+    domains: ['via.placeholder.com', 'calisa.com.ar', 'arcordiezb2c.vteximg.com.br'],
+    // También puedes usar remotePatterns si quieres, pero no es obligatorio si tienes domains
     remotePatterns: [
       {
         protocol: 'https',
