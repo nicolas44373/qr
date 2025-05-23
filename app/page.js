@@ -347,8 +347,7 @@ useEffect(() => {
               {/* Decorative gradient overlay */}
               <div className="absolute inset-0 bg-gradient-to-br from-yellow-50/80 via-transparent to-amber-50/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               
-              
-
+            
               <div className="relative p-6 space-y-4">
                 {/* Product header */}
                 <div className="flex items-start space-x-3">
