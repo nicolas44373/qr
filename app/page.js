@@ -248,8 +248,8 @@ useEffect(() => {
 
 
   const handleWhatsAppContact = (type) => {
-    const phoneMinorista = '+5494816516018'
-    const phoneMayorista = '+5494812224766'
+    const phoneMinorista = '+5493816516018'
+    const phoneMayorista = '+5493812224766'
     
     const phone = type === 'minorista' ? phoneMinorista : phoneMayorista
     const message = `Hola! Me interesa obtener información sobre sus productos para ${type}.`
