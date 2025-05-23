@@ -347,12 +347,7 @@ useEffect(() => {
               {/* Decorative gradient overlay */}
               <div className="absolute inset-0 bg-gradient-to-br from-yellow-50/80 via-transparent to-amber-50/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               
-              {/* Category badge */}
-              <div className="absolute top-4 right-4 z-10">
-                <div className="bg-gradient-to-r from-yellow-400 to-amber-400 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-md">
-                  {product.category}
-                </div>
-              </div>
+              
 
               <div className="relative p-6 space-y-4">
                 {/* Product header */}
