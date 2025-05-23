@@ -339,7 +339,7 @@ useEffect(() => {
 
         {/* Grid de Productos */}
         <div className="grid gap-6 md:gap-8 lg:grid-cols-2 xl:grid-cols-3">
-          {filteredProducts.map((product, index) => (
+          {filteredProducts.map((product) => (
             <div
               key={product.id}
               className="group relative bg-white/90 backdrop-blur-sm rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-yellow-100 hover:border-yellow-300 overflow-hidden transform hover:-translate-y-2"
@@ -414,6 +414,7 @@ useEffect(() => {
             </div>
           </div>
         )}
+
       </main>
 
       {/* WhatsApp FAB */}
