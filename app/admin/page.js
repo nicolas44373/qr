@@ -354,13 +354,13 @@ export default function AdminPage() {
                 placeholder="Buscar productos..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-6 py-3 bg-white/80 backdrop-blur-sm border-2 border-yellow-200 rounded-xl focus:ring-4 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-200"
+                className="w-full pl-12 pr-6 py-3 bg-white/80 backdrop-blur-sm border-2 border-yellow-200 rounded-xl focus:ring-4 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-200 text-black placeholder-gray"
               />
             </div>
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-4 py-3 bg-white/80 backdrop-blur-sm border-2 border-yellow-200 rounded-xl focus:ring-4 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-200"
+              className="px-4 py-3 bg-white/80 backdrop-blur-sm border-2 border-yellow-200 rounded-xl focus:ring-4 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-200 text-black"
             >
               <option value="all">Todas las categorías</option>
               {categories.map(category => (
