@@ -376,13 +376,13 @@ export default function AdminPage() {
         {(showAddForm || editingProduct) && (
           <div className="mb-8 bg-white/90 backdrop-blur-sm rounded-2xl p-6 border-2 border-yellow-200 shadow-lg">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold text-gray-800">
+              <h3 className="text-2xl font-bold text-black">
                 {editingProduct ? 'Editar Producto' : 'Agregar Nuevo Producto'}
               </h3>
               <button
                 onClick={resetForm}
                 disabled={submitting}
-                className="text-gray-500 hover:text-gray-700 p-2 disabled:opacity-50"
+                className="text-black hover:text-gray-700 p-2 disabled:opacity-50"
               >
                 <X className="h-6 w-6" />
               </button>
@@ -390,7 +390,7 @@ export default function AdminPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-black mb-2">
                   Nombre del Producto *
                 </label>
                 <input
@@ -398,14 +398,14 @@ export default function AdminPage() {
                   value={productForm.name}
                   onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
                   disabled={submitting}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-200 disabled:opacity-50"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-200 disabled:opacity-50 text-gray placeholder-gray"
                   placeholder="Ej: FILET DE MERLUZA"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-black mb-2">
                   Precio por Caja/Unidad
                 </label>
                 <input
@@ -414,13 +414,13 @@ export default function AdminPage() {
                   value={productForm.price}
                   onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
                   disabled={submitting}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-200 disabled:opacity-50"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-200 disabled:opacity-50 text-gray placeholder-gray"
                   placeholder="Ej: 6999"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-black mb-2">
                   Precio por Kilogramo
                 </label>
                 <input
@@ -429,13 +429,13 @@ export default function AdminPage() {
                   value={productForm.price_per_kg}
                   onChange={(e) => setProductForm({ ...productForm, price_per_kg: e.target.value })}
                   disabled={submitting}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-200 disabled:opacity-50"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-200 disabled:opacity-50 text-gray placeholder-gray"
                   placeholder="Ej: 6999"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-black mb-2">
                   Unidad
                 </label>
                 <input
@@ -443,20 +443,20 @@ export default function AdminPage() {
                   value={productForm.unit}
                   onChange={(e) => setProductForm({ ...productForm, unit: e.target.value })}
                   disabled={submitting}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-200 disabled:opacity-50"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-200 disabled:opacity-50 text-gray placeholder-gray"
                   placeholder="Ej: kg, caja, paquete"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-black mb-2">
                   Categoría *
                 </label>
                 <select
                   value={productForm.category_id}
                   onChange={(e) => setProductForm({ ...productForm, category_id: e.target.value })}
                   disabled={submitting}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-200 disabled:opacity-50"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-200 disabled:opacity-50 text-gray"
                   required
                 >
                   <option value="">Seleccionar categoría</option>
@@ -485,7 +485,7 @@ export default function AdminPage() {
               <button
                 onClick={resetForm}
                 disabled={submitting}
-                className="bg-gray-200 hover:bg-gray-300 disabled:opacity-50 text-gray-700 px-6 py-3 rounded-xl font-semibold transition-all duration-200"
+                className="bg-gray-200 hover:bg-gray-300 disabled:opacity-50 text-black px-6 py-3 rounded-xl font-semibold transition-all duration-200"
               >
                 Cancelar
               </button>
