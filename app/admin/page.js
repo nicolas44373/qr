@@ -398,7 +398,7 @@ export default function AdminPage() {
                   value={productForm.name}
                   onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
                   disabled={submitting}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-200 disabled:opacity-50 text-gray placeholder-gray"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-200 disabled:opacity-50 text-black placeholder-gray"
                   placeholder="Ej: FILET DE MERLUZA"
                   required
                 />
@@ -414,7 +414,7 @@ export default function AdminPage() {
                   value={productForm.price}
                   onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
                   disabled={submitting}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-200 disabled:opacity-50 text-gray placeholder-gray"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-200 disabled:opacity-50 text-black placeholder-gray"
                   placeholder="Ej: 6999"
                 />
               </div>
@@ -429,7 +429,7 @@ export default function AdminPage() {
                   value={productForm.price_per_kg}
                   onChange={(e) => setProductForm({ ...productForm, price_per_kg: e.target.value })}
                   disabled={submitting}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-200 disabled:opacity-50 text-gray placeholder-gray"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-200 disabled:opacity-50 text-black placeholder-gray"
                   placeholder="Ej: 6999"
                 />
               </div>
@@ -443,7 +443,7 @@ export default function AdminPage() {
                   value={productForm.unit}
                   onChange={(e) => setProductForm({ ...productForm, unit: e.target.value })}
                   disabled={submitting}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-200 disabled:opacity-50 text-gray placeholder-gray"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-200 disabled:opacity-50 text-black placeholder-gray"
                   placeholder="Ej: kg, caja, paquete"
                 />
               </div>
@@ -456,7 +456,7 @@ export default function AdminPage() {
                   value={productForm.category_id}
                   onChange={(e) => setProductForm({ ...productForm, category_id: e.target.value })}
                   disabled={submitting}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-200 disabled:opacity-50 text-gray"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-200 disabled:opacity-50 text-black"
                   required
                 >
                   <option value="">Seleccionar categoría</option>
