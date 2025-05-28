@@ -89,7 +89,7 @@ export default function CatalogPage() {
         if (selectedSaleType === 'mayor') {
           return product.price && mayorCategoryNames.includes(product.category)
         } else {
-          return product.pricePerKg
+          return product.price_per_kg
         }
       })
 
@@ -109,14 +109,14 @@ export default function CatalogPage() {
         // Siempre mostrar productos de marcas reconocidas
         filtered = filtered.filter(product =>
           rebozadosBrands.some(brand => 
-            product.marca?.toUpperCase() === brand.toUpperCase()
+            product.brand?.toUpperCase() === brand.toUpperCase()
           )
         )
         
         // Solo filtrar por marca específica si no es 'all'
         if (selectedBrand !== 'all') {
           filtered = filtered.filter(product =>
-            product.marca?.toUpperCase() === selectedBrand.toUpperCase()
+            product.brand?.toUpperCase() === selectedBrand.toUpperCase()
           )
         }
       }
