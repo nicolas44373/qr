@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
 
 // Componentes
 import EpicChickLoading from '../app/components/EpicChickLoading'
@@ -12,18 +13,63 @@ import EmptyState from '../app/components/EmptyState'
 import WhatsAppFAB from '../app/components/WhatsAppFAB'
 
 export default function CatalogPage() {
-  const [products] = useState([])
-  const [categories] = useState([])
+  const [products, setProducts] = useState([])
+  const [categories, setCategories] = useState([])
   const [filteredProducts, setFilteredProducts] = useState([])
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedSaleType, setSelectedSaleType] = useState('menor')
   const [selectedBrand, setSelectedBrand] = useState('all')
-  const [loading] = useState(true)
+  const [loading, setLoading] = useState(true)
   const [showContactMenu, setShowContactMenu] = useState(false)
 
   const mayorCategoryNames = ['Rebozados', 'Cajones', 'Pescados', 'Ofertas']
   const rebozadosBrands = ['GRANGYS', 'GTA', 'SHADDAI', 'VIDAL FOOD', 'SOLIMENO']
+
+  // Cargar datos iniciales
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true)
+        
+        // Cargar categorías
+        const { data: categoriesData, error: categoriesError } = await supabase
+          .from('categories')
+          .select('*')
+          .order('name')
+        
+        if (categoriesError) throw categoriesError
+        
+        // Cargar productos
+        const { data: productsData, error: productsError } = await supabase
+          .from('products')
+          .select(`
+            *,
+            category:categories(id, name)
+          `)
+          .order('name')
+        
+        if (productsError) throw productsError
+        
+        // Procesar productos para incluir el nombre de la categoría
+        const processedProducts = productsData?.map(product => ({
+          ...product,
+          categoryId: product.categoryId || product.category?.id,
+          category: product.category?.name || 'Sin categoría'
+        })) || []
+        
+        setCategories(categoriesData || [])
+        setProducts(processedProducts)
+        
+      } catch (error) {
+        console.error('Error cargando datos:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [])
 
   const formatPrice = (price) => {
     if (!price) return '-'
@@ -33,53 +79,62 @@ export default function CatalogPage() {
     }).format(price)
   }
 
+  // Filtrar productos
+  useEffect(() => {
+    const filterProducts = () => {
+      let filtered = products
 
-    // 1. Filtrar por tipo de venta
-    filtered = filtered.filter(product => {
-      if (selectedSaleType === 'mayor') {
-        return product.price && mayorCategoryNames.includes(product.category)
-      } else {
-        return product.pricePerKg
-      }
-    })
+      // 1. Filtrar por tipo de venta
+      filtered = filtered.filter(product => {
+        if (selectedSaleType === 'mayor') {
+          return product.price && mayorCategoryNames.includes(product.category)
+        } else {
+          return product.pricePerKg
+        }
+      })
 
-    // 2. Filtrar por categoría
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(product =>
-        product.categoryId.toString() === selectedCategory
-      )
-    }
-
-    // 3. Filtrar por subcategoría (marca) si es Rebozados y por mayor
-    if (
-      selectedSaleType === 'mayor' &&
-      categories.find(cat => cat.id.toString() === selectedCategory)?.name === 'Rebozados'
-    ) {
-      // Siempre mostrar productos de marcas reconocidas, independientemente de selectedBrand
-      filtered = filtered.filter(product =>
-        rebozadosBrands.some(brand => 
-          product.brand?.toUpperCase() === brand.toUpperCase()
-        )
-      )
-      
-      // Solo filtrar por marca específica si no es 'all'
-      if (selectedBrand !== 'all') {
+      // 2. Filtrar por categoría
+      if (selectedCategory !== 'all') {
         filtered = filtered.filter(product =>
-          product.brand?.toUpperCase() === selectedBrand.toUpperCase()
+          product.categoryId && product.categoryId.toString() === selectedCategory
         )
       }
+
+      // 3. Filtrar por subcategoría (marca) si es Rebozados y por mayor
+      if (
+        selectedSaleType === 'mayor' &&
+        selectedCategory !== 'all' &&
+        categories.find(cat => cat.id && cat.id.toString() === selectedCategory)?.name === 'Rebozados'
+      ) {
+        // Siempre mostrar productos de marcas reconocidas
+        filtered = filtered.filter(product =>
+          rebozadosBrands.some(brand => 
+            product.marca?.toUpperCase() === brand.toUpperCase()
+          )
+        )
+        
+        // Solo filtrar por marca específica si no es 'all'
+        if (selectedBrand !== 'all') {
+          filtered = filtered.filter(product =>
+            product.marca?.toUpperCase() === selectedBrand.toUpperCase()
+          )
+        }
+      }
+
+      // 4. Filtrar por búsqueda
+      if (searchTerm) {
+        filtered = filtered.filter(product =>
+          product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (product.brand && product.brand.toLowerCase().includes(searchTerm.toLowerCase()))
+        )
+      }
+
+      setFilteredProducts(filtered)
     }
 
-    // 4. Filtrar por búsqueda
-    if (searchTerm) {
-      filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.category.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    }
-
-    setFilteredProducts(filtered)
-  
+    filterProducts()
+  }, [searchTerm, selectedCategory, selectedSaleType, selectedBrand, products, categories])
 
   const handleResetFilters = () => {
     setSearchTerm('')
@@ -98,39 +153,9 @@ export default function CatalogPage() {
     setShowContactMenu(false)
   }
 
-  useEffect(() => {
-  const filterProducts = () => {
-    // Move your filterProducts logic here
-    let filtered = products
-
-    if (searchTerm) {
-      filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.brand.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    }
-
-    if (selectedCategory) {
-      filtered = filtered.filter(product => product.categoryId === selectedCategory)
-    }
-
-    if (selectedSaleType === 'unit') {
-      filtered = filtered.filter(product => product.price > 0)
-    } else if (selectedSaleType === 'kg') {
-      filtered = filtered.filter(product => product.pricePerKg > 0)
-    }
-
-    if (selectedBrand) {
-      filtered = filtered.filter(product => product.brand === selectedBrand)
-    }
-
-    setFilteredProducts(filtered)
-  }
-
-  filterProducts()
-}, [searchTerm, selectedCategory, selectedSaleType, selectedBrand, products])
-
-  const currentCategoryName = categories.find(cat => cat.id.toString() === selectedCategory)?.name
+  const currentCategoryName = categories.find(cat => 
+    cat.id && selectedCategory !== 'all' && cat.id.toString() === selectedCategory
+  )?.name
 
   if (loading) {
     return <EpicChickLoading />
