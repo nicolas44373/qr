@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
 
 // Componentes
 import EpicChickLoading from '../app/components/EpicChickLoading'
@@ -13,14 +12,14 @@ import EmptyState from '../app/components/EmptyState'
 import WhatsAppFAB from '../app/components/WhatsAppFAB'
 
 export default function CatalogPage() {
-  const [products, setProducts] = useState([])
-  const [categories, setCategories] = useState([])
+  const [products] = useState([])
+  const [categories] = useState([])
   const [filteredProducts, setFilteredProducts] = useState([])
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedSaleType, setSelectedSaleType] = useState('menor')
   const [selectedBrand, setSelectedBrand] = useState('all')
-  const [loading, setLoading] = useState(true)
+  const [loading] = useState(true)
   const [showContactMenu, setShowContactMenu] = useState(false)
 
   const mayorCategoryNames = ['Rebozados', 'Cajones', 'Pescados', 'Ofertas']
@@ -32,56 +31,6 @@ export default function CatalogPage() {
       style: 'currency',
       currency: 'ARS',
     }).format(price)
-  }
-
-  const filterProducts = () => {
-    let filtered = products
-
-    // 1. Filtrar por tipo de venta
-    filtered = filtered.filter(product => {
-      if (selectedSaleType === 'mayor') {
-        return product.price && mayorCategoryNames.includes(product.category)
-      } else {
-        return product.pricePerKg
-      }
-    })
-
-    // 2. Filtrar por categoría
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(product =>
-        product.categoryId.toString() === selectedCategory
-      )
-    }
-
-    // 3. Filtrar por subcategoría (marca) si es Rebozados y por mayor
-    if (
-      selectedSaleType === 'mayor' &&
-      categories.find(cat => cat.id.toString() === selectedCategory)?.name === 'Rebozados'
-    ) {
-      // Siempre mostrar productos de marcas reconocidas, independientemente de selectedBrand
-      filtered = filtered.filter(product =>
-        rebozadosBrands.some(brand => 
-          product.brand?.toUpperCase() === brand.toUpperCase()
-        )
-      )
-      
-      // Solo filtrar por marca específica si no es 'all'
-      if (selectedBrand !== 'all') {
-        filtered = filtered.filter(product =>
-          product.brand?.toUpperCase() === selectedBrand.toUpperCase()
-        )
-      }
-    }
-
-    // 4. Filtrar por búsqueda
-    if (searchTerm) {
-      filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.category.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    }
-
-    setFilteredProducts(filtered)
   }
 
   const handleResetFilters = () => {
@@ -102,36 +51,59 @@ export default function CatalogPage() {
   }
 
   useEffect(() => {
-  const filterProducts = () => {
-    // Move your filterProducts logic here
-    let filtered = products
+    const filterProducts = () => {
+      let filtered = products
 
-    if (searchTerm) {
-      filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.brand.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+      // 1. Filtrar por tipo de venta
+      filtered = filtered.filter(product => {
+        if (selectedSaleType === 'mayor') {
+          return product.price && mayorCategoryNames.includes(product.category)
+        } else {
+          return product.pricePerKg
+        }
+      })
+
+      // 2. Filtrar por categoría
+      if (selectedCategory !== 'all') {
+        filtered = filtered.filter(product =>
+          product.categoryId.toString() === selectedCategory
+        )
+      }
+
+      // 3. Filtrar por subcategoría (marca) si es Rebozados y por mayor
+      if (
+        selectedSaleType === 'mayor' &&
+        categories.find(cat => cat.id.toString() === selectedCategory)?.name === 'Rebozados'
+      ) {
+        // Siempre mostrar productos de marcas reconocidas, independientemente de selectedBrand
+        filtered = filtered.filter(product =>
+          rebozadosBrands.some(brand => 
+            product.brand?.toUpperCase() === brand.toUpperCase()
+          )
+        )
+        
+        // Solo filtrar por marca específica si no es 'all'
+        if (selectedBrand !== 'all') {
+          filtered = filtered.filter(product =>
+            product.brand?.toUpperCase() === selectedBrand.toUpperCase()
+          )
+        }
+      }
+
+      // 4. Filtrar por búsqueda
+      if (searchTerm) {
+        filtered = filtered.filter(product =>
+          product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (product.brand && product.brand.toLowerCase().includes(searchTerm.toLowerCase()))
+        )
+      }
+
+      setFilteredProducts(filtered)
     }
 
-    if (selectedCategory) {
-      filtered = filtered.filter(product => product.categoryId === selectedCategory)
-    }
-
-    if (selectedSaleType === 'unit') {
-      filtered = filtered.filter(product => product.price > 0)
-    } else if (selectedSaleType === 'kg') {
-      filtered = filtered.filter(product => product.pricePerKg > 0)
-    }
-
-    if (selectedBrand) {
-      filtered = filtered.filter(product => product.brand === selectedBrand)
-    }
-
-    setFilteredProducts(filtered)
-  }
-
-  filterProducts()
-}, [searchTerm, selectedCategory, selectedSaleType, selectedBrand, products])
+    filterProducts()
+  }, [searchTerm, selectedCategory, selectedSaleType, selectedBrand, products, categories, mayorCategoryNames, rebozadosBrands])
 
   const currentCategoryName = categories.find(cat => cat.id.toString() === selectedCategory)?.name
 

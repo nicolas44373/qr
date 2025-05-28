@@ -66,7 +66,7 @@ export const useProducts = () => {
   const addProduct = async (productData) => {
     setSubmitting(true)
     try {
-      const { data, error } = await supabase.from('products').insert([{
+      const { error } = await supabase.from('products').insert([{
         name: productData.name.toUpperCase().trim(),
         price: productData.price ? parseFloat(productData.price) : null,
         price_per_kg: productData.price_per_kg ? parseFloat(productData.price_per_kg) : null,
