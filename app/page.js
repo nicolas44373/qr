@@ -102,49 +102,36 @@ export default function CatalogPage() {
   }
 
   useEffect(() => {
-    const fetchData = async () => {
-      await new Promise(resolve => setTimeout(resolve, 3000))
+  const filterProducts = () => {
+    // Move your filterProducts logic here
+    let filtered = products
 
-      const { data: productsData, error: productsError } = await supabase
-        .from('products')
-        .select(`
-          id,
-          name,
-          category_id,
-          price,
-          unit,
-          price_per_kg,
-          marca,
-          category:categories ( name )
-        `)
-
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from('categories')
-        .select('*')
-
-      if (productsError || categoriesError) {
-        console.error('Error al cargar datos:', productsError || categoriesError)
-      } else {
-        const productsWithCategory = productsData.map((p) => ({
-          ...p,
-          category: p.category?.name || 'Sin categoría',
-          categoryId: p.category_id,
-          pricePerKg: p.price_per_kg,
-          brand: p.marca || ''
-        }))
-
-        setProducts(productsWithCategory)
-        setCategories(categoriesData)
-        setLoading(false)
-      }
+    if (searchTerm) {
+      filtered = filtered.filter(product =>
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.brand.toLowerCase().includes(searchTerm.toLowerCase())
+      )
     }
 
-    fetchData()
-  }, [])
+    if (selectedCategory) {
+      filtered = filtered.filter(product => product.categoryId === selectedCategory)
+    }
 
-  useEffect(() => {
-    filterProducts()
-  }, [searchTerm, selectedCategory, selectedSaleType, selectedBrand, products])
+    if (selectedSaleType === 'unit') {
+      filtered = filtered.filter(product => product.price > 0)
+    } else if (selectedSaleType === 'kg') {
+      filtered = filtered.filter(product => product.pricePerKg > 0)
+    }
+
+    if (selectedBrand) {
+      filtered = filtered.filter(product => product.brand === selectedBrand)
+    }
+
+    setFilteredProducts(filtered)
+  }
+
+  filterProducts()
+}, [searchTerm, selectedCategory, selectedSaleType, selectedBrand, products])
 
   const currentCategoryName = categories.find(cat => cat.id.toString() === selectedCategory)?.name
 
