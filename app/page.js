@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
-// Importar todos los componentes
+// Componentes
 import EpicChickLoading from '../app/components/EpicChickLoading'
 import Header from '../app/components/Header'
 import SearchAndFilters from '../app/components/SearchAndFilters'
@@ -18,12 +18,13 @@ export default function CatalogPage() {
   const [filteredProducts, setFilteredProducts] = useState([])
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedSaleType, setSelectedSaleType] = useState('menor') // Por defecto "Por Menor"
+  const [selectedSaleType, setSelectedSaleType] = useState('menor')
+  const [selectedBrand, setSelectedBrand] = useState('all')
   const [loading, setLoading] = useState(true)
   const [showContactMenu, setShowContactMenu] = useState(false)
 
-  // Categorías permitidas para venta por mayor
   const mayorCategoryNames = ['Rebozados', 'Cajones', 'Pescados', 'Ofertas']
+  const rebozadosBrands = ['GRANGYS', 'GTA', 'SHADDAI', 'VIDAL FOOD', 'SOLIMENO']
 
   const formatPrice = (price) => {
     if (!price) return '-'
@@ -36,25 +37,43 @@ export default function CatalogPage() {
   const filterProducts = () => {
     let filtered = products
 
-    // 1. Filtrar por tipo de venta (mayor/menor)
+    // 1. Filtrar por tipo de venta
     filtered = filtered.filter(product => {
       if (selectedSaleType === 'mayor') {
-        // Para venta por mayor: debe tener precio unitario Y estar en categorías permitidas
         return product.price && mayorCategoryNames.includes(product.category)
       } else {
-        // Para venta por menor: debe tener precio por kg
         return product.pricePerKg
       }
     })
 
-    // 2. Filtrar por categoría seleccionada
+    // 2. Filtrar por categoría
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(product =>
         product.categoryId.toString() === selectedCategory
       )
     }
 
-    // 3. Filtrar por término de búsqueda
+    // 3. Filtrar por subcategoría (marca) si es Rebozados y por mayor
+    if (
+      selectedSaleType === 'mayor' &&
+      categories.find(cat => cat.id.toString() === selectedCategory)?.name === 'Rebozados'
+    ) {
+      // Siempre mostrar productos de marcas reconocidas, independientemente de selectedBrand
+      filtered = filtered.filter(product =>
+        rebozadosBrands.some(brand => 
+          product.brand?.toUpperCase() === brand.toUpperCase()
+        )
+      )
+      
+      // Solo filtrar por marca específica si no es 'all'
+      if (selectedBrand !== 'all') {
+        filtered = filtered.filter(product =>
+          product.brand?.toUpperCase() === selectedBrand.toUpperCase()
+        )
+      }
+    }
+
+    // 4. Filtrar por búsqueda
     if (searchTerm) {
       filtered = filtered.filter(product =>
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -65,28 +84,26 @@ export default function CatalogPage() {
     setFilteredProducts(filtered)
   }
 
+  const handleResetFilters = () => {
+    setSearchTerm('')
+    setSelectedCategory('all')
+    setSelectedSaleType('menor')
+    setSelectedBrand('all')
+  }
+
   const handleWhatsAppContact = (type) => {
     const phoneMinorista = '+5493816516018'
     const phoneMayorista = '+5493812224766'
-    
     const phone = type === 'minorista' ? phoneMinorista : phoneMayorista
     const message = `Hola! Me interesa obtener información sobre sus productos para ${type}.`
-    
     const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
     window.open(whatsappUrl, '_blank')
     setShowContactMenu(false)
   }
 
-  const handleResetFilters = () => {
-    setSearchTerm('')
-    setSelectedCategory('all')
-    setSelectedSaleType('menor') // Reset también el tipo de venta
-  }
-
   useEffect(() => {
     const fetchData = async () => {
-      // Simulación de carga con delay
-      await new Promise((resolve) => setTimeout(resolve, 3000))
+      await new Promise(resolve => setTimeout(resolve, 3000))
 
       const { data: productsData, error: productsError } = await supabase
         .from('products')
@@ -97,6 +114,7 @@ export default function CatalogPage() {
           price,
           unit,
           price_per_kg,
+          marca,
           category:categories ( name )
         `)
 
@@ -111,7 +129,8 @@ export default function CatalogPage() {
           ...p,
           category: p.category?.name || 'Sin categoría',
           categoryId: p.category_id,
-          pricePerKg: p.price_per_kg
+          pricePerKg: p.price_per_kg,
+          brand: p.marca || ''
         }))
 
         setProducts(productsWithCategory)
@@ -125,7 +144,9 @@ export default function CatalogPage() {
 
   useEffect(() => {
     filterProducts()
-  }, [searchTerm, selectedCategory, selectedSaleType, products])
+  }, [searchTerm, selectedCategory, selectedSaleType, selectedBrand, products])
+
+  const currentCategoryName = categories.find(cat => cat.id.toString() === selectedCategory)?.name
 
   if (loading) {
     return <EpicChickLoading />
@@ -140,16 +161,43 @@ export default function CatalogPage() {
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
           selectedCategory={selectedCategory}
-          setSelectedCategory={setSelectedCategory}
+          setSelectedCategory={(cat) => {
+            setSelectedCategory(cat)
+            setSelectedBrand('all') // Reinicia subcategoría al cambiar de categoría
+          }}
           selectedSaleType={selectedSaleType}
-          setSelectedSaleType={setSelectedSaleType}
+          setSelectedSaleType={(type) => {
+            setSelectedSaleType(type)
+            setSelectedBrand('all') // Reinicia subcategoría al cambiar tipo de venta
+          }}
+          selectedSubCategory={selectedBrand}
+          setSelectedSubCategory={setSelectedBrand} 
           categories={categories}
         />
+
+        {/* Subcategorías (marcas) para Rebozados por Mayor */}
+        {selectedSaleType === 'mayor' && currentCategoryName === 'Rebozados' && (
+          <div className="flex flex-wrap justify-center gap-3 mt-4">
+            {['all', ...rebozadosBrands].map((brand) => (
+              <button
+                key={brand}
+                onClick={() => setSelectedBrand(brand)}
+                className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 shadow-md ${
+                  selectedBrand === brand
+                    ? 'bg-yellow-400 text-white scale-105'
+                    : 'bg-white border border-yellow-200 text-gray-700 hover:bg-yellow-100'
+                }`}
+              >
+                {brand === 'all' ? 'Todas las marcas' : brand}
+              </button>
+            ))}
+          </div>
+        )}
 
         <ProductCounter count={filteredProducts.length} />
 
         {filteredProducts.length > 0 ? (
-          <div className="grid gap-6 md:gap-8 lg:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-6 md:gap-8 lg:grid-cols-2 xl:grid-cols-3 mt-6">
             {filteredProducts.map((product) => (
               <ProductCard
                 key={product.id}
