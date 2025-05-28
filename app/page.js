@@ -33,6 +33,54 @@ export default function CatalogPage() {
     }).format(price)
   }
 
+
+    // 1. Filtrar por tipo de venta
+    filtered = filtered.filter(product => {
+      if (selectedSaleType === 'mayor') {
+        return product.price && mayorCategoryNames.includes(product.category)
+      } else {
+        return product.pricePerKg
+      }
+    })
+
+    // 2. Filtrar por categoría
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(product =>
+        product.categoryId.toString() === selectedCategory
+      )
+    }
+
+    // 3. Filtrar por subcategoría (marca) si es Rebozados y por mayor
+    if (
+      selectedSaleType === 'mayor' &&
+      categories.find(cat => cat.id.toString() === selectedCategory)?.name === 'Rebozados'
+    ) {
+      // Siempre mostrar productos de marcas reconocidas, independientemente de selectedBrand
+      filtered = filtered.filter(product =>
+        rebozadosBrands.some(brand => 
+          product.brand?.toUpperCase() === brand.toUpperCase()
+        )
+      )
+      
+      // Solo filtrar por marca específica si no es 'all'
+      if (selectedBrand !== 'all') {
+        filtered = filtered.filter(product =>
+          product.brand?.toUpperCase() === selectedBrand.toUpperCase()
+        )
+      }
+    }
+
+    // 4. Filtrar por búsqueda
+    if (searchTerm) {
+      filtered = filtered.filter(product =>
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.category.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
+
+    setFilteredProducts(filtered)
+  
+
   const handleResetFilters = () => {
     setSearchTerm('')
     setSelectedCategory('all')
@@ -51,59 +99,36 @@ export default function CatalogPage() {
   }
 
   useEffect(() => {
-    const filterProducts = () => {
-      let filtered = products
+  const filterProducts = () => {
+    // Move your filterProducts logic here
+    let filtered = products
 
-      // 1. Filtrar por tipo de venta
-      filtered = filtered.filter(product => {
-        if (selectedSaleType === 'mayor') {
-          return product.price && mayorCategoryNames.includes(product.category)
-        } else {
-          return product.pricePerKg
-        }
-      })
-
-      // 2. Filtrar por categoría
-      if (selectedCategory !== 'all') {
-        filtered = filtered.filter(product =>
-          product.categoryId.toString() === selectedCategory
-        )
-      }
-
-      // 3. Filtrar por subcategoría (marca) si es Rebozados y por mayor
-      if (
-        selectedSaleType === 'mayor' &&
-        categories.find(cat => cat.id.toString() === selectedCategory)?.name === 'Rebozados'
-      ) {
-        // Siempre mostrar productos de marcas reconocidas, independientemente de selectedBrand
-        filtered = filtered.filter(product =>
-          rebozadosBrands.some(brand => 
-            product.brand?.toUpperCase() === brand.toUpperCase()
-          )
-        )
-        
-        // Solo filtrar por marca específica si no es 'all'
-        if (selectedBrand !== 'all') {
-          filtered = filtered.filter(product =>
-            product.brand?.toUpperCase() === selectedBrand.toUpperCase()
-          )
-        }
-      }
-
-      // 4. Filtrar por búsqueda
-      if (searchTerm) {
-        filtered = filtered.filter(product =>
-          product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (product.brand && product.brand.toLowerCase().includes(searchTerm.toLowerCase()))
-        )
-      }
-
-      setFilteredProducts(filtered)
+    if (searchTerm) {
+      filtered = filtered.filter(product =>
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.brand.toLowerCase().includes(searchTerm.toLowerCase())
+      )
     }
 
-    filterProducts()
-  }, [searchTerm, selectedCategory, selectedSaleType, selectedBrand, products, categories, mayorCategoryNames, rebozadosBrands])
+    if (selectedCategory) {
+      filtered = filtered.filter(product => product.categoryId === selectedCategory)
+    }
+
+    if (selectedSaleType === 'unit') {
+      filtered = filtered.filter(product => product.price > 0)
+    } else if (selectedSaleType === 'kg') {
+      filtered = filtered.filter(product => product.pricePerKg > 0)
+    }
+
+    if (selectedBrand) {
+      filtered = filtered.filter(product => product.brand === selectedBrand)
+    }
+
+    setFilteredProducts(filtered)
+  }
+
+  filterProducts()
+}, [searchTerm, selectedCategory, selectedSaleType, selectedBrand, products])
 
   const currentCategoryName = categories.find(cat => cat.id.toString() === selectedCategory)?.name
 
