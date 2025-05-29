@@ -19,12 +19,12 @@ export default function CatalogPage() {
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedSaleType, setSelectedSaleType] = useState('menor')
-  const [selectedBrand, setSelectedBrand] = useState('all')
+  const [selectedMarca, setSelectedMarca] = useState('all')
   const [loading, setLoading] = useState(true)
   const [showContactMenu, setShowContactMenu] = useState(false)
 
   const mayorCategoryNames = ['Rebozados', 'Cajones', 'Pescados', 'Ofertas']
-  const rebozadosBrands = ['GRANGYS', 'GTA', 'SHADDAI', 'VIDAL FOOD', 'SOLIMENO']
+  const rebozadosMarcas = ['GRANGYS', 'GTA', 'SHADDAI', 'VIDAL FOOD', 'SOLIMENO']
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -54,7 +54,7 @@ export default function CatalogPage() {
         // Procesar productos para incluir el nombre de la categoría
         const processedProducts = productsData?.map(product => ({
           ...product,
-          categoryId: product.categoryId || product.category?.id,
+          categoryId: product.category_id || product.category?.id,
           category: product.category?.name || 'Sin categoría'
         })) || []
         
@@ -70,6 +70,17 @@ export default function CatalogPage() {
 
     loadData()
   }, [])
+
+  // Auto-seleccionar "todas las marcas" cuando se selecciona Rebozados por mayor
+  useEffect(() => {
+    const currentCategoryName = categories.find(cat => 
+      cat.id && selectedCategory !== 'all' && cat.id.toString() === selectedCategory
+    )?.name
+
+    if (selectedSaleType === 'mayor' && currentCategoryName === 'Rebozados') {
+      setSelectedMarca('all')
+    }
+  }, [selectedCategory, selectedSaleType, categories])
 
   const formatPrice = (price) => {
     if (!price) return '-'
@@ -96,7 +107,7 @@ export default function CatalogPage() {
       // 2. Filtrar por categoría
       if (selectedCategory !== 'all') {
         filtered = filtered.filter(product =>
-          product.categoryId && product.categoryId.toString() === selectedCategory
+          product.category_id && product.categoryId.toString() === selectedCategory
         )
       }
 
@@ -108,15 +119,15 @@ export default function CatalogPage() {
       ) {
         // Siempre mostrar productos de marcas reconocidas
         filtered = filtered.filter(product =>
-          rebozadosBrands.some(brand => 
-            product.brand?.toUpperCase() === brand.toUpperCase()
+          rebozadosMarcas.some(marca => 
+            product.marca?.toUpperCase() === marca.toUpperCase()
           )
         )
         
         // Solo filtrar por marca específica si no es 'all'
-        if (selectedBrand !== 'all') {
+        if (selectedMarca !== 'all') {
           filtered = filtered.filter(product =>
-            product.brand?.toUpperCase() === selectedBrand.toUpperCase()
+            product.marca?.toUpperCase() === selectedMarca.toUpperCase()
           )
         }
       }
@@ -126,7 +137,7 @@ export default function CatalogPage() {
         filtered = filtered.filter(product =>
           product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (product.brand && product.brand.toLowerCase().includes(searchTerm.toLowerCase()))
+          (product.marca && product.marca.toLowerCase().includes(searchTerm.toLowerCase()))
         )
       }
 
@@ -134,13 +145,13 @@ export default function CatalogPage() {
     }
 
     filterProducts()
-  }, [searchTerm, selectedCategory, selectedSaleType, selectedBrand, products, categories])
+  }, [searchTerm, selectedCategory, selectedSaleType, selectedMarca, products, categories])
 
   const handleResetFilters = () => {
     setSearchTerm('')
     setSelectedCategory('all')
     setSelectedSaleType('menor')
-    setSelectedBrand('all')
+    setSelectedMarca('all')
   }
 
   const handleWhatsAppContact = (type) => {
@@ -172,32 +183,32 @@ export default function CatalogPage() {
           selectedCategory={selectedCategory}
           setSelectedCategory={(cat) => {
             setSelectedCategory(cat)
-            setSelectedBrand('all') // Reinicia subcategoría al cambiar de categoría
+            setSelectedMarca('all') // Reinicia subcategoría al cambiar de categoría
           }}
           selectedSaleType={selectedSaleType}
           setSelectedSaleType={(type) => {
             setSelectedSaleType(type)
-            setSelectedBrand('all') // Reinicia subcategoría al cambiar tipo de venta
+            setSelectedMarca('all') // Reinicia subcategoría al cambiar tipo de venta
           }}
-          selectedSubCategory={selectedBrand}
-          setSelectedSubCategory={setSelectedBrand} 
+          selectedSubCategory={selectedMarca}
+          setSelectedSubCategory={setSelectedMarca} 
           categories={categories}
         />
 
         {/* Subcategorías (marcas) para Rebozados por Mayor */}
         {selectedSaleType === 'mayor' && currentCategoryName === 'Rebozados' && (
           <div className="flex flex-wrap justify-center gap-3 mt-4">
-            {['all', ...rebozadosBrands].map((brand) => (
+            {['all', ...rebozadosMarcas].map((marca) => (
               <button
-                key={brand}
-                onClick={() => setSelectedBrand(brand)}
+                key={marca}
+                onClick={() => setSelectedMarca(marca)}
                 className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 shadow-md ${
-                  selectedBrand === brand
+                  selectedMarca === marca
                     ? 'bg-yellow-400 text-white scale-105'
                     : 'bg-white border border-yellow-200 text-gray-700 hover:bg-yellow-100'
                 }`}
               >
-                {brand === 'all' ? 'Todas las marcas' : brand}
+                {marca === 'all' ? 'Todas las marcas' : marca}
               </button>
             ))}
           </div>
