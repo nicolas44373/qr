@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase' // ajustá si el path es distinto
 
@@ -32,7 +32,7 @@ const formatMoney = (value: string | null) => {
   })}`
 }
 
-export default function CatalogPage() {
+function CatalogContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const categoryId = searchParams.get('category')
@@ -253,5 +253,26 @@ export default function CatalogPage() {
         </div>
       )}
     </div>
+  )
+}
+
+// Loading fallback component
+function CatalogLoading() {
+  return (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+        <div className="animate-pulse mb-2 h-6 w-48 bg-gray-300 rounded mx-auto"></div>
+        <div className="animate-pulse h-4 w-32 bg-gray-300 rounded mx-auto"></div>
+      </div>
+    </div>
+  )
+}
+
+export default function CatalogPage() {
+  return (
+    <Suspense fallback={<CatalogLoading />}>
+      <CatalogContent />
+    </Suspense>
   )
 }

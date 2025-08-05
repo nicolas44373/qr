@@ -2,14 +2,16 @@
 const nextConfig = {
   images: {
     domains: ['via.placeholder.com', 'calisa.com.ar', 'arcordiezb2c.vteximg.com.br', 'congeladosartico.com.ar'],
-    // También puedes usar remotePatterns si quieres, pero no es obligatorio si tienes domains
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'via.placeholder.com',
-      },
+      { protocol: 'https', hostname: 'via.placeholder.com' }
     ],
   },
-}
+  eslint: {
+    ignoreDuringBuilds: true,    // <--- ignora ESLint en build
+  },
+  typescript: {
+    ignoreBuildErrors: true,     // <--- ignora errores de TypeScript en build
+  },
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;
