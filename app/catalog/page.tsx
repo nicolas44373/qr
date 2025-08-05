@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, Suspense } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase' // ajustá si el path es distinto
 
@@ -32,7 +32,7 @@ const formatMoney = (value: string | null) => {
   })}`
 }
 
-function CatalogContent() {
+export default function CatalogPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const categoryId = searchParams.get('category')
@@ -107,9 +107,9 @@ function CatalogContent() {
   const ProductCard = ({ product }: { product: ProductRow }) => (
     <div className="border rounded-xl p-4 flex flex-col justify-between shadow-sm hover:shadow-md transition bg-white">
       <div className="mb-2">
-        <h3 className="font-semibold text-lg line-clamp-2">{product.name}</h3>
+        <h3 className="font-semibold text-lg line-clamp-2 text-black">{product.name}</h3>
         {product.marca && categoryName !== 'Rebozados' && (
-          <p className="text-xs uppercase tracking-wide text-gray-500 mt-1">
+          <p className="text-xs uppercase tracking-wide text-gray-700 mt-1">
             Marca: {product.marca}
           </p>
         )}
@@ -119,13 +119,20 @@ function CatalogContent() {
         <div className="flex flex-wrap gap-4">
           {product.price && (
             <div>
-              <div className="text-xs text-gray-500">Precio unidad</div>
+              <div className="text-xs text-black">Precio unidad</div>
               <div className="font-bold text-green-600">{formatMoney(product.price)}</div>
             </div>
           )}
-          
+          {product.price_per_kg && (
+            <div>
+              <div className="text-xs text-black">
+                Precio por kilo ({product.unit || 'kg'})
+              </div>
+              <div className="font-bold text-green-600">{formatMoney(product.price_per_kg)}</div>
+            </div>
+          )}
           {!product.price && !product.price_per_kg && (
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-black">
               Sin precio disponible
             </div>
           )}
@@ -134,7 +141,7 @@ function CatalogContent() {
 
       {product.unit && (
         <div className="mt-3 pt-2 border-t border-gray-100">
-          <div className="text-sm text-gray-600">Unidad: {product.unit}</div>
+          <div className="text-sm text-black">Unidad: {product.unit}</div>
         </div>
       )}
     </div>
@@ -174,11 +181,11 @@ function CatalogContent() {
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-4xl font-bold text-gray-800">
+          <h1 className="text-4xl font-bold text-black">
             {categoryName ? categoryName : 'Catálogo'}
           </h1>
           {categoryName && (
-            <p className="text-lg text-gray-600 mt-2">
+            <p className="text-lg text-black mt-2">
               Productos por mayor en la categoría <strong>{categoryName}</strong>
             </p>
           )}
@@ -197,10 +204,10 @@ function CatalogContent() {
       {products.length === 0 ? (
         <div className="text-center py-16">
           <div className="text-gray-400 text-6xl mb-4">📦</div>
-          <p className="text-gray-700 text-xl mb-2">
+          <p className="text-black text-xl mb-2">
             No hay productos con precio en esta categoría.
           </p>
-          <p className="text-gray-500">
+          <p className="text-black">
             Los productos se mostrarán aquí una vez que tengan precios asignados.
           </p>
         </div>
@@ -216,8 +223,8 @@ function CatalogContent() {
                   <div className="flex items-center mb-6">
                     <div className="bg-orange-500 w-1 h-8 rounded-full mr-4"></div>
                     <div>
-                      <h2 className="text-2xl font-bold text-gray-800">{brand}</h2>
-                      <p className="text-gray-600">{brandProducts.length} producto{brandProducts.length !== 1 ? 's' : ''}</p>
+                      <h2 className="text-2xl font-bold text-black">{brand}</h2>
+                      <p className="text-black">{brandProducts.length} producto{brandProducts.length !== 1 ? 's' : ''}</p>
                     </div>
                   </div>
                   
@@ -253,26 +260,5 @@ function CatalogContent() {
         </div>
       )}
     </div>
-  )
-}
-
-// Loading fallback component
-function CatalogLoading() {
-  return (
-    <div className="min-h-[60vh] flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
-        <div className="animate-pulse mb-2 h-6 w-48 bg-gray-300 rounded mx-auto"></div>
-        <div className="animate-pulse h-4 w-32 bg-gray-300 rounded mx-auto"></div>
-      </div>
-    </div>
-  )
-}
-
-export default function CatalogPage() {
-  return (
-    <Suspense fallback={<CatalogLoading />}>
-      <CatalogContent />
-    </Suspense>
   )
 }
