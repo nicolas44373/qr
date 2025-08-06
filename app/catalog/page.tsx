@@ -2,7 +2,9 @@
 
 import React, { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase' // ajustá si el path es distinto
+import { supabase } from '@/lib/supabase'
+// Importar el componente WhatsAppFAB
+import WhatsAppFAB from '../components/WhatsAppFAB'
 
 // Tipos según tu esquema
 type ProductRow = {
@@ -41,6 +43,8 @@ function CatalogContent() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [darkMode, setDarkMode] = useState(false)
+  // Estado para el menú de WhatsApp
+  const [showContactMenu, setShowContactMenu] = useState(false)
 
   // Inicializar el modo oscuro desde localStorage
   useEffect(() => {
@@ -102,6 +106,16 @@ function CatalogContent() {
     load()
   }, [categoryId])
 
+  // Función para manejar el contacto por WhatsApp
+  const handleWhatsAppContact = (type: string) => {
+    const phoneMayorista = '+5493812224766'
+    const categoryText = categoryName ? ` de ${categoryName}` : ''
+    const message = `Hola! Me interesa obtener información sobre sus productos${categoryText} por mayor.`
+    const whatsappUrl = `https://wa.me/${phoneMayorista}?text=${encodeURIComponent(message)}`
+    window.open(whatsappUrl, '_blank')
+    setShowContactMenu(false)
+  }
+
   // Función para agrupar productos por marca
   const groupProductsByBrand = (products: ProductRow[]) => {
     const grouped: { [key: string]: ProductRow[] } = {}
@@ -115,6 +129,21 @@ function CatalogContent() {
     })
     
     return grouped
+  }
+
+  // Función para hacer scroll a una marca específica
+  const scrollToBrand = (brand: string) => {
+    const element = document.getElementById(`brand-${brand}`)
+    if (element) {
+      const headerOffset = 100 // Offset para no quedarse pegado al top
+      const elementPosition = element.getBoundingClientRect().top
+      const offsetPosition = elementPosition + window.pageYOffset - headerOffset
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      })
+    }
   }
 
   // Componente para el botón de modo oscuro
@@ -244,6 +273,7 @@ function CatalogContent() {
 
   const isRebozados = categoryName === 'Rebozados'
   const groupedProducts = isRebozados ? groupProductsByBrand(products) : null
+  const brandNames = groupedProducts ? Object.keys(groupedProducts).sort() : []
 
   return (
     <div className={`min-h-screen transition-colors ${
@@ -300,15 +330,58 @@ function CatalogContent() {
           </div>
         ) : (
           <>
+            {/* Filtros de marcas solo para Rebozados */}
+            {isRebozados && brandNames.length > 1 && (
+              <div className="mb-8">
+                <div className={`rounded-xl p-4 ${
+                  darkMode ? 'bg-gray-800' : 'bg-gray-50'
+                }`}>
+                  <h3 className={`text-lg font-semibold mb-4 ${
+                    darkMode ? 'text-white' : 'text-gray-800'
+                  }`}>
+                    Filtrar por marca:
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {brandNames.map((brand) => (
+                      <button
+                        key={brand}
+                        onClick={() => scrollToBrand(brand)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
+                          darkMode
+                            ? 'bg-orange-600 hover:bg-orange-700 text-white shadow-lg hover:shadow-xl'
+                            : 'bg-orange-500 hover:bg-orange-600 text-white shadow-md hover:shadow-lg'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2">
+                          📦 {brand}
+                          {groupedProducts && (
+                            <span className={`text-xs px-2 py-1 rounded-full ${
+                              darkMode ? 'bg-orange-700' : 'bg-orange-400'
+                            }`}>
+                              {groupedProducts[brand].length}
+                            </span>
+                          )}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {isRebozados && groupedProducts ? (
               // Vista agrupada por marcas para Rebozados
               <div className="space-y-8">
                 {Object.entries(groupedProducts)
                   .sort(([a], [b]) => a.localeCompare(b))
                   .map(([brand, brandProducts]) => (
-                  <div key={brand} className={`rounded-2xl p-6 ${
-                    darkMode ? 'bg-gray-800' : 'bg-gray-50'
-                  }`}>
+                  <div 
+                    key={brand} 
+                    id={`brand-${brand}`}
+                    className={`rounded-2xl p-6 scroll-mt-24 ${
+                      darkMode ? 'bg-gray-800' : 'bg-gray-50'
+                    }`}
+                  >
                     <div className="flex items-center mb-6">
                       <div className="bg-orange-500 w-1 h-8 rounded-full mr-4"></div>
                       <div>
@@ -363,6 +436,13 @@ function CatalogContent() {
           </div>
         )}
       </div>
+
+      {/* Componente WhatsApp FAB */}
+      <WhatsAppFAB
+        showMenu={showContactMenu}
+        setShowMenu={setShowContactMenu}
+        onContact={handleWhatsAppContact}
+      />
     </div>
   )
 }

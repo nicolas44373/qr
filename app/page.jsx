@@ -22,22 +22,22 @@ export default function MainPage() {
       imageSrc: '/pata.jpeg',
       bgColor: 'from-orange-400 to-orange-600',
       hoverColor: 'hover:from-orange-500 hover:to-orange-700',
-      description: 'Cortes frescos de pata y muslo'
+      description: 'Cajon de Pata Muslo'
     },
     Filet: {
       imageSrc: '/filet.JPG',
       bgColor: 'from-red-400 to-red-600',
       hoverColor: 'hover:from-red-500 hover:to-red-700',
-      description: 'Pechugas y cortes premium'
+      description: 'Filet de pechuga'
     },
-    Cajones: {
+    'Cajon de Pollo': {
       imageSrc: '/cajon.jpeg',
       bgColor: 'from-amber-400 to-amber-600',
       hoverColor: 'hover:from-amber-500 hover:to-amber-700',
-      description: 'Pollo entero por cajones'
+      description: 'Cajones x20kg'
     },
     Ofertas: {
-      imageSrc: '/categories/ofertas.jpg',
+      imageSrc: '/ofertas.jpg',
       bgColor: 'from-green-400 to-green-600',
       hoverColor: 'hover:from-green-500 hover:to-green-700',
       description: 'Promociones especiales'
@@ -46,13 +46,19 @@ export default function MainPage() {
       imageSrc: '/pescado.JPG',
       bgColor: 'from-blue-400 to-blue-600',
       hoverColor: 'hover:from-blue-500 hover:to-blue-700',
-      description: 'Productos del mar frescos'
+      description: 'Merluza, Atun'
     },
     Rebozados: {
       imageSrc: '/rebo.JPG',
       bgColor: 'from-purple-400 to-purple-600',
       hoverColor: 'hover:from-purple-500 hover:to-purple-700',
       description: 'Productos elaborados'
+    },
+    'Carne Mecanizada (Molida)': {
+      imageSrc: '/cms.jpg',
+      bgColor: 'from-purple-400 to-purple-600',
+      hoverColor: 'hover:from-purple-500 hover:to-purple-700',
+      description: 'cms'
     }
   }
 
@@ -86,7 +92,7 @@ export default function MainPage() {
         })
 
         // Filtrar solo las categorías que queremos mostrar y que tienen productos
-        const targetCategories = ['Pata Muslo', 'Filet', 'Cajones', 'Ofertas', 'Pescados', 'Rebozados']
+        const targetCategories = ['Pata Muslo', 'Filet', 'Cajon de Pollo', 'Ofertas', 'Pescados', 'Rebozados','Carne Mecanizada (Molida)' ]
         const filteredCategories = categoriesData?.filter(category => 
           targetCategories.includes(category.name) && counts[category.id] > 0
         ) || []
@@ -231,24 +237,25 @@ export default function MainPage() {
         <div className="mt-16 text-center">
           <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-8 max-w-4xl mx-auto shadow-lg">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4">
-              Venta por Mayor
+              Informacion Importante
             </h2>
             <p className="text-lg text-gray-700 mb-6">
-              Ofrecemos los mejores precios en productos avícolas y del mar para tu negocio. 
-              Calidad garantizada y entrega confiable.
+              Se toman pedidos un dia antes de 8:30 a 20:30 //
+              Se realizan los repartos al otro dia de 9:00 a 15:00hs
+              $200 por bulto, 5 bultos el envio es gratis 
             </p>
             <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-600">
               <span className="flex items-center">
                 <svg className="w-5 h-5 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                Productos frescos
+                Efectivo
               </span>
               <span className="flex items-center">
                 <svg className="w-5 h-5 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                Precios mayoristas
+                Transferencia
               </span>
               <span className="flex items-center">
                 <svg className="w-5 h-5 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
