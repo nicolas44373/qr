@@ -59,7 +59,13 @@ export default function MainPage() {
       bgColor: 'from-purple-400 to-purple-600',
       hoverColor: 'hover:from-purple-500 hover:to-purple-700',
       description: 'cms'
-    }
+    },
+    Otros: {
+      imageSrc: '/otros.png',
+      bgColor: 'from-purple-400 to-purple-600',
+      hoverColor: 'hover:from-purple-500 hover:to-purple-700',
+      description: 'Huevos y Pan Rallado'
+    },
   }
 
   // Cargar categorías y contar productos
@@ -92,7 +98,7 @@ export default function MainPage() {
         })
 
         // Filtrar solo las categorías que queremos mostrar y que tienen productos
-        const targetCategories = ['Pata Muslo', 'Filet', 'Cajon de Pollo', 'Ofertas', 'Pescados', 'Rebozados','Carne Mecanizada (Molida)' ]
+        const targetCategories = ['Pata Muslo', 'Filet', 'Cajon de Pollo', 'Ofertas', 'Pescados', 'Rebozados','Carne Mecanizada (Molida)','Otros' ]
         const filteredCategories = categoriesData?.filter(category => 
           targetCategories.includes(category.name) && counts[category.id] > 0
         ) || []
@@ -237,31 +243,31 @@ export default function MainPage() {
         <div className="mt-16 text-center">
           <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-8 max-w-4xl mx-auto shadow-lg">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4">
-              Informacion Importante
+              INFORMACION IMPORTANTE
             </h2>
             <p className="text-lg text-gray-700 mb-6">
-              Se toman pedidos un dia antes de 8:30 a 20:30 //
-              Se realizan los repartos al otro dia de 9:00 a 15:00hs
-              $200 por bulto, 5 bultos el envio es gratis 
+              SE TOMAN PEDIDOS UN DIA ANTES DE 8:30 A 20:30 //
+              SE REALIZAN LOS REPARTOS AL OTRO DIA 9:00 A 15:00hs
+              $200 POR BULTO, 5 BULTOS EL ENVIO ES GRATIS 
             </p>
             <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-600">
               <span className="flex items-center">
                 <svg className="w-5 h-5 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                Efectivo
+                EFECTIVO
               </span>
               <span className="flex items-center">
                 <svg className="w-5 h-5 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                Transferencia
+                TRANSFERENCIA
               </span>
               <span className="flex items-center">
                 <svg className="w-5 h-5 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                Entrega rápida
+                ENTREGA RAPIDA
               </span>
             </div>
           </div>
