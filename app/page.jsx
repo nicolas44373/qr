@@ -37,7 +37,7 @@ export default function MainPage() {
       description: 'Cajones x20kg'
     },
     Ofertas: {
-      imageSrc: '/ofertas.jpg',
+      imageSrc: '/oferta.PNG.jpg',
       bgColor: 'from-green-400 to-green-600',
       hoverColor: 'hover:from-green-500 hover:to-green-700',
       description: 'Promociones especiales'
