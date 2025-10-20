@@ -35,21 +35,7 @@ const WhatsAppFAB = ({ showMenu, setShowMenu, onContact }) => {
               </h3>
             </div>
             <div className="p-2 space-y-1">
-              <button
-                onClick={() => onContact('minorista')}
-                className="group relative w-full py-3 px-4 rounded-xl overflow-hidden
-                           bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100
-                           border border-green-200/50 hover:border-green-300
-                           transition-all duration-300 transform hover:scale-105 hover:shadow-lg
-                           text-green-800 font-semibold"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent 
-                               translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-                <div className="relative flex items-center justify-between">
-                  <span>🛍️ Contacto Minorista</span>
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-ping"></div>
-                </div>
-              </button>
+              
 
               <button
                 onClick={() => onContact('mayorista')}
