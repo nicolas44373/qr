@@ -1,7 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { Plus } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import { useProducts } from './hooks/useProducts'
 import { useProductFilters } from './hooks/useProductFilters'
 import AdminHeader from './components/AdminHeader'
@@ -11,140 +10,171 @@ import ProductForm from './components/ProductForm'
 import ProductsTable from './components/ProductsTable'
 import LoadingScreen from './components/LoadingScreen'
 
+type Toast = { message: string; type: 'success' | 'error' } | null
+type ConfirmDel = { id: number | string; name: string } | null
+
+const emptyForm = { name: '', price: '', unit: '', category_id: '', marca: '' }
+
 export default function AdminPage() {
-  const [showAddForm, setShowAddForm] = useState(false)
+  const [showAddForm, setShowAddForm]     = useState(false)
   const [editingProduct, setEditingProduct] = useState<number | string | null>(null)
-  const [editFormData, setEditFormData] = useState<any>({
-    name: '',
-    price: '',
-    unit: '',
-    category_id: '',
-    marca: ''
-  })
+  const [editFormData, setEditFormData]   = useState<any>({ ...emptyForm })
+  const [toast, setToast]                 = useState<Toast>(null)
+  const [confirmDel, setConfirmDel]       = useState<ConfirmDel>(null)
 
-  const {
-    products,
-    categories,
-    loading,
-    submitting,
-    addProduct,
-    updateProduct,
-    deleteProduct
-  } = useProducts()
+  const { products, categories, loading, submitting, addProduct, updateProduct, deleteProduct } = useProducts()
+  const { selectedCategory, setSelectedCategory, searchTerm, setSearchTerm, filteredProducts } = useProductFilters(products)
 
-  const {
-    selectedCategory,
-    setSelectedCategory,
-    searchTerm,
-    setSearchTerm,
-    filteredProducts
-  } = useProductFilters(products)
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), 3500)
+    return () => clearTimeout(t)
+  }, [toast])
 
-  const emptyForm = {
-    name: '',
-    price: '',
-    unit: '',
-    category_id: '',
-    marca: ''
-  }
+  const notify = (message: string, type: 'success' | 'error') => setToast({ message, type })
 
-  const handleShowAddForm = () => {
+  const handleShowAdd = () => {
     setShowAddForm(true)
     setEditingProduct(null)
     setEditFormData({ ...emptyForm })
   }
 
-  const handleEditProduct = (product: any) => {
+  const handleEdit = (product: any) => {
     setEditingProduct(product.id)
     setEditFormData({
       name: product.name || '',
       price: product.price ?? '',
       unit: product.unit || '',
       category_id: product.category_id ? String(product.category_id) : '',
-      marca: product.marca || ''
+      marca: product.marca || '',
     })
     setShowAddForm(false)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const handleFormSubmit = async (formData: any) => {
+  const handleSubmit = async (formData: any) => {
     if (editingProduct) {
-      const result = await updateProduct(editingProduct, formData)
-      if (result.success) {
-        alert('Producto actualizado exitosamente')
-        handleFormCancel()
-      } else {
-        alert(`Error al actualizar el producto: ${result.error}`)
-      }
-      return result
+      const r = await updateProduct(editingProduct, formData)
+      if (r.success) { notify('Producto actualizado correctamente', 'success'); handleCancel() }
+      else notify(`Error: ${r.error}`, 'error')
+      return r
     } else {
-      const result = await addProduct(formData)
-      if (result.success) {
-        alert('Producto agregado exitosamente!')
-        handleFormCancel()
-      } else {
-        alert(`Error al agregar el producto: ${result.error}`)
-      }
-      return result
+      const r = await addProduct(formData)
+      if (r.success) { notify('Producto agregado correctamente', 'success'); handleCancel() }
+      else notify(`Error: ${r.error}`, 'error')
+      return r
     }
   }
 
-  const handleFormCancel = () => {
+  const handleCancel = () => {
     setShowAddForm(false)
     setEditingProduct(null)
     setEditFormData({ ...emptyForm })
   }
 
-  if (loading) {
-    return <LoadingScreen />
+  const handleDeleteRequest = (product: any) => setConfirmDel({ id: product.id, name: product.name })
+
+  const handleDeleteConfirm = async () => {
+    if (!confirmDel) return
+    const r = await deleteProduct(confirmDel.id)
+    setConfirmDel(null)
+    if (r.success) notify('Producto eliminado', 'success')
+    else notify('Error al eliminar el producto', 'error')
   }
 
+  if (loading) return <LoadingScreen />
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-amber-50">
+    <div className="min-h-screen bg-gray-50">
+
+      {/* ── Toast ── */}
+      <div className={`fixed top-5 right-5 z-50 transition-all duration-300 ${toast ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}>
+        <div className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl text-white text-sm font-semibold min-w-[240px] ${
+          toast?.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'
+        }`}>
+          <span className="text-base">{toast?.type === 'success' ? '✓' : '✕'}</span>
+          {toast?.message}
+        </div>
+      </div>
+
+      {/* ── Modal confirmar eliminación ── */}
+      {confirmDel && (
+        <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-7 max-w-sm w-full">
+            <div className="text-4xl mb-4 text-center">🗑️</div>
+            <h3 className="font-extrabold text-gray-900 text-lg mb-2 text-center">¿Eliminar producto?</h3>
+            <p className="text-gray-500 text-sm text-center mb-6">
+              Vas a eliminar <strong className="text-gray-800">"{confirmDel.name}"</strong>.<br />Esta acción no se puede deshacer.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDel(null)}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                disabled={submitting}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold text-sm disabled:opacity-50 transition-colors"
+              >
+                {submitting ? 'Eliminando…' : 'Sí, eliminar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <AdminHeader />
 
-      <main className="max-w-7xl mx-auto px-6 py-10">
-        <AdminStats 
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+
+        <AdminStats
           products={products}
           categories={categories}
           filteredProducts={filteredProducts}
         />
 
-        <div className="mb-8 space-y-6">
-          <div className="flex justify-between items-center">
-            <button
-              onClick={handleShowAddForm}
-              disabled={submitting}
-              className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-3 rounded-xl font-semibold flex items-center space-x-2 shadow-lg transition-all duration-200"
-            >
-              <Plus className="h-5 w-5" />
-              <span>Agregar Producto</span>
-            </button>
-          </div>
-
-          <ProductFilters
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            selectedCategory={selectedCategory}
-            setSelectedCategory={setSelectedCategory}
-            categories={categories}
-          />
-        </div>
-
+        {/* Formulario */}
         <ProductForm
           isVisible={showAddForm || !!editingProduct}
           isEditing={!!editingProduct}
           categories={categories}
           submitting={submitting}
-          onSubmit={handleFormSubmit}
-          onCancel={handleFormCancel}
+          onSubmit={handleSubmit}
+          onCancel={handleCancel}
           initialData={editFormData}
         />
 
+        {/* Barra de herramientas */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1">
+            <ProductFilters
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              selectedCategory={selectedCategory}
+              setSelectedCategory={setSelectedCategory}
+              categories={categories}
+            />
+          </div>
+          <button
+            onClick={handleShowAdd}
+            disabled={submitting}
+            className="shrink-0 flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+            </svg>
+            Nuevo Producto
+          </button>
+        </div>
+
         <ProductsTable
           products={filteredProducts}
-          onEdit={handleEditProduct}
-          onDelete={deleteProduct}
+          onEdit={handleEdit}
+          onDelete={handleDeleteRequest}
           submitting={submitting}
+          editingId={editingProduct}
         />
       </main>
     </div>

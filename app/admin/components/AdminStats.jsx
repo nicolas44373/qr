@@ -1,35 +1,21 @@
-import { Package, Filter, Search } from 'lucide-react'
-
 export default function AdminStats({ products, categories, filteredProducts }) {
+  const stats = [
+    { label: 'Total productos', value: products.length,         icon: '📦', ring: 'border-blue-100   bg-blue-50'   },
+    { label: 'Categorías',      value: categories.length,       icon: '🗂️', ring: 'border-purple-100 bg-purple-50' },
+    { label: 'Filtrados',       value: filteredProducts.length, icon: '🔍', ring: 'border-amber-100  bg-amber-50'  },
+  ]
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-      <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl border-2 border-yellow-200 shadow-lg">
-        <div className="flex items-center justify-between">
+    <div className="grid grid-cols-3 gap-4">
+      {stats.map(s => (
+        <div key={s.label} className={`bg-white border rounded-2xl p-4 sm:p-5 flex items-center gap-4 shadow-sm ${s.ring}`}>
+          <span className="text-2xl sm:text-3xl shrink-0">{s.icon}</span>
           <div>
-            <p className="text-yellow-600 font-semibold">Total Productos</p>
-            <p className="text-3xl font-bold text-gray-800">{products.length}</p>
+            <p className="text-2xl sm:text-3xl font-extrabold text-gray-900 leading-none">{s.value}</p>
+            <p className="text-xs text-gray-500 font-medium mt-0.5">{s.label}</p>
           </div>
-          <Package className="h-12 w-12 text-yellow-400" />
         </div>
-      </div>
-      <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl border-2 border-yellow-200 shadow-lg">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-yellow-600 font-semibold">Categorías</p>
-            <p className="text-3xl font-bold text-gray-800">{categories.length}</p>
-          </div>
-          <Filter className="h-12 w-12 text-yellow-400" />
-        </div>
-      </div>
-      <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl border-2 border-yellow-200 shadow-lg">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-yellow-600 font-semibold">Productos Filtrados</p>
-            <p className="text-3xl font-bold text-gray-800">{filteredProducts.length}</p>
-          </div>
-          <Search className="h-12 w-12 text-yellow-400" />
-        </div>
-      </div>
+      ))}
     </div>
   )
 }

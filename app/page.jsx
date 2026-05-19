@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-// Componentes
 import EpicChickLoading from './components/EpicChickLoading'
 import Header from './components/Header'
 import WhatsAppFAB from './components/WhatsAppFAB'
@@ -16,261 +15,225 @@ export default function MainPage() {
   const [showContactMenu, setShowContactMenu] = useState(false)
   const router = useRouter()
 
-  // Configuración visual para cada categoría
   const categoryConfig = {
-    'Pata Muslo': {
-      imageSrc: '/pata.jpeg',
-      bgColor: 'from-orange-400 to-orange-600',
-      hoverColor: 'hover:from-orange-500 hover:to-orange-700',
-      description: 'Cajon de Pata Muslo'
-    },
-    Filet: {
-      imageSrc: '/filet.JPG',
-      bgColor: 'from-red-400 to-red-600',
-      hoverColor: 'hover:from-red-500 hover:to-red-700',
-      description: 'Filet de pechuga'
-    },
-    'Cajon de Pollo': {
-      imageSrc: '/cajon.jpeg',
-      bgColor: 'from-amber-400 to-amber-600',
-      hoverColor: 'hover:from-amber-500 hover:to-amber-700',
-      description: 'Cajones x20kg'
-    },
-    Ofertas: {
-      imageSrc: '/oferta.PNG',
-      bgColor: 'from-green-400 to-green-600',
-      hoverColor: 'hover:from-green-500 hover:to-green-700',
-      description: 'Promociones especiales'
-    },
-    Pescados: {
-      imageSrc: '/pescado.JPG',
-      bgColor: 'from-blue-400 to-blue-600',
-      hoverColor: 'hover:from-blue-500 hover:to-blue-700',
-      description: 'Merluza, Atun'
-    },
-    Rebozados: {
-      imageSrc: '/rebo.JPG',
-      bgColor: 'from-purple-400 to-purple-600',
-      hoverColor: 'hover:from-purple-500 hover:to-purple-700',
-      description: 'Productos elaborados'
-    },
-    'Carne Mecanizada (Molida)': {
-      imageSrc: '/cms.jpg',
-      bgColor: 'from-purple-400 to-purple-600',
-      hoverColor: 'hover:from-purple-500 hover:to-purple-700',
-      description: 'cms'
-    },
-    Otros: {
-      imageSrc: '/otros.png',
-      bgColor: 'from-purple-400 to-purple-600',
-      hoverColor: 'hover:from-purple-500 hover:to-purple-700',
-      description: 'Huevos y Pan Rallado'
-    },
+    'Pata Muslo':              { imageSrc: '/pata.jpeg',    emoji: '🍗', description: 'Cajón de Pata Muslo' },
+    Filet:                     { imageSrc: '/filet.JPG',    emoji: '🥩', description: 'Filet de Pechuga' },
+    'Cajon de Pollo':          { imageSrc: '/gualppa.jpeg', emoji: '📦', description: 'Cajones x20kg' },
+    Ofertas:                   { imageSrc: '/oferta.PNG',   emoji: '🔥', description: 'Promociones Especiales' },
+    Pescados:                  { imageSrc: '/pescado.JPG',  emoji: '🐟', description: 'Merluza, Atún y más' },
+    Rebozados:                 { imageSrc: '/rebo.JPG',     emoji: '🍞', description: 'Productos Elaborados' },
+    'Carne Mecanizada (Molida)': { imageSrc: '/cms.jpg',   emoji: '🥩', description: 'Carne Molida' },
+    Otros:                     { imageSrc: '/otros.png',    emoji: '🥚', description: 'Huevos y Pan Rallado' },
   }
 
-  // Cargar categorías y contar productos
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true)
-        
-        // Cargar categorías
         const { data: categoriesData, error: categoriesError } = await supabase
-          .from('categories')
-          .select('*')
-          .order('name')
-        
+          .from('categories').select('*').order('name')
         if (categoriesError) throw categoriesError
 
-        // Cargar productos para contar por categoría
         const { data: productsData, error: productsError } = await supabase
-          .from('products')
-          .select('category_id, price')
-        
+          .from('products').select('category_id, price')
         if (productsError) throw productsError
 
-        // Contar productos por categoría (solo los que tienen precio - productos por mayor)
         const counts = {}
-        productsData?.forEach(product => {
-          if (product.price) { // Solo contar productos con precio (por mayor)
-            counts[product.category_id] = (counts[product.category_id] || 0) + 1
-          }
+        productsData?.forEach(p => {
+          if (p.price) counts[p.category_id] = (counts[p.category_id] || 0) + 1
         })
 
-        // Filtrar solo las categorías que queremos mostrar y que tienen productos
-        const targetCategories = ['Pata Muslo', 'Filet', 'Cajon de Pollo', 'Ofertas', 'Pescados', 'Rebozados','Carne Mecanizada (Molida)','Otros' ]
-        const filteredCategories = categoriesData?.filter(category => 
-          targetCategories.includes(category.name) && counts[category.id] > 0
+        const targetCategories = [
+          'Pata Muslo','Filet','Cajon de Pollo','Ofertas',
+          'Pescados','Rebozados','Carne Mecanizada (Molida)','Otros',
+        ]
+        const filteredCategories = categoriesData?.filter(c =>
+          targetCategories.includes(c.name) && counts[c.id] > 0
         ) || []
 
         setCategories(filteredCategories)
         setProductCounts(counts)
-        
-      } catch (error) {
-        console.error('Error cargando datos:', error)
+      } catch (err) {
+        console.error('Error cargando datos:', err)
       } finally {
         setLoading(false)
       }
     }
-
     loadData()
   }, [])
 
-  const handleCategoryClick = (categoryId) => {
-    // Navegar a la página de catálogo con la categoría seleccionada
-    router.push(`/catalog?category=${categoryId}`)
-  }
+  const handleCategoryClick = id => router.push(`/catalog?category=${id}`)
 
-  const handleWhatsAppContact = (type) => {
-    const phoneMayorista = '+5493812224766'
-    const message = `Hola! Me interesa obtener información sobre sus productos por mayor.`
-    const whatsappUrl = `https://wa.me/${phoneMayorista}?text=${encodeURIComponent(message)}`
-    window.open(whatsappUrl, '_blank')
+  const handleWhatsAppContact = () => {
+    const url = `https://wa.me/+5493812224766?text=${encodeURIComponent('Hola! Me interesa obtener información sobre sus productos por mayor.')}`
+    window.open(url, '_blank')
     setShowContactMenu(false)
   }
 
-  if (loading) {
-    return <EpicChickLoading />
-  }
+  if (loading) return <EpicChickLoading />
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-amber-50 to-yellow-100">
+    <div className="min-h-screen bg-gray-50">
       <Header />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-8 sm:py-12">
-        {/* Título principal */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-800 mb-4">
-            Nuestros Productos
+      {/* ── HERO ── */}
+      <div className="bg-white border-b border-gray-100">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-16 text-center">
+          <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full mb-5">
+            <span>⭐</span> Venta Mayorista
+          </div>
+          <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 mb-4 tracking-tight">
+            Catálogo de Productos
           </h1>
-          <p className="text-xl sm:text-2xl text-gray-600 max-w-3xl mx-auto">
-            Selecciona una categoría para ver nuestros productos por mayor
+          <p className="text-gray-500 text-lg max-w-lg mx-auto">
+            Elegí una categoría para ver todos los precios por mayor
           </p>
         </div>
+      </div>
 
-        {/* Grid de categorías */}
+      {/* ── BANNER ENVÍO GRATIS ── */}
+      <div className="bg-gradient-to-r from-emerald-600 to-teal-600">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-12 text-center sm:text-left">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">🚚</span>
+              <div>
+                <p className="text-white font-extrabold text-lg leading-tight">Envíos 100% GRATIS</p>
+                <p className="text-emerald-200 text-sm">En todos los pedidos, sin monto mínimo</p>
+              </div>
+            </div>
+            <div className="hidden sm:block h-10 w-px bg-white/25 rounded-full" />
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">🕗</span>
+              <div>
+                <p className="text-white font-extrabold text-lg leading-tight">Pedidos: 8:30 a 20:00 hs</p>
+                <p className="text-emerald-200 text-sm">Reparto al día siguiente · 9:00 a 15:00 hs</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
+
+        {/* ── GRID DE CATEGORÍAS ── */}
         {categories.length > 0 ? (
-          <div className="grid gap-6 sm:gap-8 md:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto">
-            {categories.map((category) => {
-              const config = categoryConfig[category.name] || {
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+            {categories.map(category => {
+              const cfg = categoryConfig[category.name] || {
                 imageSrc: '/default-category.jpg',
-                bgColor: 'from-gray-400 to-gray-600',
-                hoverColor: 'hover:from-gray-500 hover:to-gray-700',
-                description: 'Productos disponibles'
+                emoji: '📦',
+                description: 'Productos disponibles',
               }
-              
-              const productCount = productCounts[category.id] || 0
+              const count = productCounts[category.id] || 0
 
               return (
                 <button
                   key={category.id}
                   onClick={() => handleCategoryClick(category.id)}
-                  className={`
-                    group relative overflow-hidden rounded-2xl
-                    bg-gradient-to-br ${config.bgColor} ${config.hoverColor}
-                    transform transition-all duration-300 ease-in-out
-                    hover:scale-105 hover:shadow-2xl
-                    focus:outline-none focus:ring-4 focus:ring-yellow-300
-                    active:scale-95
-                    h-80 sm:h-96
-                  `}
+                  className="group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl border border-gray-100 hover:border-amber-200 transition-all duration-300 hover:-translate-y-1 active:scale-[0.97] focus:outline-none focus:ring-2 focus:ring-amber-400 text-left"
                 >
-                  {/* Imagen de fondo */}
-                  <div className="absolute inset-0">
+                  {/* Imagen */}
+                  <div className="relative w-full h-40 sm:h-48 overflow-hidden bg-gray-100">
                     <Image
-                      src={config.imageSrc}
+                      src={cfg.imageSrc}
                       alt={category.name}
                       fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                     />
-                    {/* Overlay oscuro para mejorar legibilidad del texto */}
-                    <div className="absolute inset-0 bg-black/40 group-hover:bg-black/30 transition-all duration-300"></div>
+                    {/* Badge count */}
+                    <div className="absolute top-2.5 right-2.5 bg-black/50 backdrop-blur-sm text-white text-[11px] font-bold px-2 py-0.5 rounded-full">
+                      {count} items
+                    </div>
                   </div>
 
-                  {/* Efecto de brillo */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-20 transform -skew-x-12 group-hover:translate-x-full transition-all duration-1000"></div>
-                  
-                  {/* Badge de cantidad de productos */}
-                  <div className="absolute top-4 right-4 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 z-10">
-                    <span className="text-white text-sm font-semibold">
-                      {productCount} productos
-                    </span>
-                  </div>
-                  
-                  {/* Contenido del botón */}
-                  <div className="relative z-10 flex flex-col justify-end h-full p-6 sm:p-8">
-                    {/* Nombre de la categoría */}
-                    <h3 className="text-2xl sm:text-3xl font-bold text-white mb-2 group-hover:text-yellow-100 transition-colors duration-300">
-                      {category.name}
-                    </h3>
-                    
-                    {/* Descripción */}
-                    <p className="text-lg sm:text-xl text-white/90 group-hover:text-white transition-colors duration-300 mb-4">
-                      {config.description}
-                    </p>
-                    
-                    {/* Indicador de acción */}
-                    <div className="inline-flex items-center text-white/80 group-hover:text-white transition-colors duration-300">
-                      <span className="text-sm font-medium">Ver productos</span>
-                      <svg 
-                        className="ml-2 w-5 h-5 transform group-hover:translate-x-1 transition-transform duration-300" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  {/* Info */}
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-gray-900 text-sm sm:text-base leading-snug truncate">
+                          {category.name}
+                        </h3>
+                        <p className="text-gray-400 text-xs mt-0.5 truncate">{cfg.description}</p>
+                      </div>
+                      <span className="text-xl shrink-0">{cfg.emoji}</span>
+                    </div>
+
+                    <div className="mt-3 flex items-center gap-1 text-amber-600">
+                      <span className="text-xs font-bold uppercase tracking-wide">Ver precios</span>
+                      <svg className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                       </svg>
                     </div>
                   </div>
+
+                  {/* Borde inferior de acento al hover */}
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-400 to-orange-400 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
                 </button>
               )
             })}
           </div>
         ) : (
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">🐔</div>
-            <h3 className="text-2xl font-bold text-gray-800 mb-2">
-              No hay categorías disponibles
-            </h3>
-            <p className="text-gray-600">
-              Aún no se han cargado productos en las categorías principales.
-            </p>
+          <div className="text-center py-24">
+            <div className="text-6xl mb-5">🐔</div>
+            <h3 className="text-xl font-bold text-gray-700 mb-2">No hay categorías disponibles</h3>
+            <p className="text-gray-400 text-sm">Los productos aparecerán aquí una vez que tengan precios asignados.</p>
           </div>
         )}
 
-        {/* Información adicional */}
-        <div className="mt-16 text-center">
-          <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-8 max-w-4xl mx-auto shadow-lg">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4">
-              INFORMACION IMPORTANTE
-            </h2>
-            <p className="text-lg text-gray-700 mb-6">
-              SE TOMAN PEDIDOS UN DIA ANTES DE 8:30 A 20:30 //
-              SE REALIZAN LOS REPARTOS AL OTRO DIA 9:00 A 15:00hs
-              $200 POR BULTO, 5 BULTOS EL ENVIO ES GRATIS 
-            </p>
-            <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-600">
-              <span className="flex items-center">
-                <svg className="w-5 h-5 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-                EFECTIVO
-              </span>
-              <span className="flex items-center">
-                <svg className="w-5 h-5 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-                TRANSFERENCIA
-              </span>
-              <span className="flex items-center">
-                <svg className="w-5 h-5 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-                ENTREGA RAPIDA
-              </span>
+        {/* ── SECCIÓN DE INFORMACIÓN ── */}
+        <div className="mt-16 space-y-5">
+
+          {/* Tres columnas de info */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-2xl shrink-0 border border-emerald-100">
+                🚚
+              </div>
+              <div>
+                <p className="font-bold text-gray-900 text-sm">Envío Gratis</p>
+                <p className="text-gray-400 text-xs mt-0.5">Sin costo en todos los pedidos</p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center text-2xl shrink-0 border border-amber-100">
+                🕗
+              </div>
+              <div>
+                <p className="font-bold text-gray-900 text-sm">Horario de Pedidos</p>
+                <p className="text-gray-400 text-xs mt-0.5">8:30 a 20:00 hs</p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-2xl shrink-0 border border-blue-100">
+                📅
+              </div>
+              <div>
+                <p className="font-bold text-gray-900 text-sm">Reparto</p>
+                <p className="text-gray-400 text-xs mt-0.5">Al día siguiente · 9:00 a 15:00 hs</p>
+              </div>
             </div>
           </div>
+
+          {/* Medios de pago */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-6 py-5 flex flex-col sm:flex-row items-center gap-4 justify-between">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Medios de pago</p>
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-emerald-50 rounded-full flex items-center justify-center text-base border border-emerald-100">💵</div>
+                <span className="text-sm font-semibold text-gray-700">Efectivo</span>
+              </div>
+              <div className="w-px h-5 bg-gray-200" />
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-blue-50 rounded-full flex items-center justify-center text-base border border-blue-100">🏦</div>
+                <span className="text-sm font-semibold text-gray-700">Transferencia</span>
+              </div>
+            </div>
+          </div>
+
         </div>
       </main>
 

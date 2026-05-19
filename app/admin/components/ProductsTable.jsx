@@ -1,105 +1,108 @@
-// components/ProductsTable.tsx
 import { Edit2, Trash2, Package } from 'lucide-react'
 
-export default function ProductsTable({ 
-  products, 
-  onEdit, 
-  onDelete, 
-  submitting 
-}) {
-  const formatPrice = (price) => {
-    if (price === null || price === undefined || price === '') return '-'
-    const num = typeof price === 'string' ? parseFloat(price) : price
-    if (isNaN(num)) return '-'
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(num)
-  }
+const fmt = (price) => {
+  if (price === null || price === undefined || price === '') return '—'
+  const n = parseFloat(price)
+  if (isNaN(n)) return '—'
+  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2 }).format(n)
+}
 
-  const handleDelete = async (productId) => {
-    if (!confirm('¿Estás seguro de que querés eliminar este producto?')) {
-      return
-    }
-    const result = await onDelete(productId)
-    if (result.success) {
-      alert('Producto eliminado exitosamente')
-    } else {
-      alert('Error al eliminar el producto')
-    }
-  }
-
+export default function ProductsTable({ products, onEdit, onDelete, submitting, editingId }) {
   return (
-    <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg overflow-hidden border-2 border-yellow-200">
-      <div className="bg-gradient-to-r from-yellow-400 to-amber-400 px-6 py-4">
-        <h3 className="text-xl font-bold text-white">
-          Productos ({products.length})
+    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+
+      {/* Header */}
+      <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <h3 className="font-extrabold text-gray-900 text-base">
+          Productos
         </h3>
+        <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">
+          {products.length} resultado{products.length !== 1 ? 's' : ''}
+        </span>
       </div>
 
       {products.length === 0 ? (
-        <div className="text-center py-12">
-          <Package className="h-16 w-16 text-yellow-400 mx-auto mb-4" />
-          <p className="text-gray-600 text-lg">No se encontraron productos</p>
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <Package className="h-10 w-10 text-gray-300 mb-3" />
+          <p className="text-gray-500 font-semibold text-sm">No se encontraron productos</p>
+          <p className="text-gray-400 text-xs mt-1">Probá con otro filtro o buscador</p>
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-yellow-50">
-              <tr>
-                <th className="text-left px-6 py-4 font-semibold text-gray-700">Producto</th>
-                <th className="text-center px-6 py-4 font-semibold text-gray-700">Marca</th>
-                <th className="text-center px-6 py-4 font-semibold text-gray-700">Categoría</th>
-                <th className="text-center px-6 py-4 font-semibold text-gray-700">Precio unidad</th>
-                <th className="text-center px-6 py-4 font-semibold text-gray-700">Acciones</th>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-100">
+                <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Producto</th>
+                <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide hidden sm:table-cell">Categoría</th>
+                <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide hidden md:table-cell">Marca</th>
+                <th className="text-right px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Precio</th>
+                <th className="px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide text-center w-24">Acciones</th>
               </tr>
             </thead>
-            <tbody>
-              {products.map((product, index) => (
-                <tr
-                  key={product.id}
-                  className={`border-b border-yellow-100 ${
-                    index % 2 === 0 ? 'bg-white' : 'bg-yellow-25'
-                  } hover:bg-yellow-50 transition-colors`}
-                >
-                  <td className="px-6 py-4 font-medium text-gray-800">{product.name}</td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="inline-block bg-purple-100 text-purple-700 text-sm font-medium px-3 py-1 rounded-full">
-                      {product.marca || 'Sin marca'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="inline-block bg-yellow-100 text-yellow-700 text-sm font-medium px-3 py-1 rounded-full">
-                      {product.category_name || 'Sin categoría'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center font-semibold text-green-600">
-                    {formatPrice(product.price)}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <div className="flex items-center justify-center space-x-2">
-                      <button
-                        onClick={() => onEdit(product)}
-                        disabled={submitting}
-                        className="bg-blue-100 hover:bg-blue-200 disabled:opacity-50 text-blue-600 p-2 rounded-lg transition-colors"
-                        title="Editar producto"
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(product.id)}
-                        disabled={submitting}
-                        className="bg-red-100 hover:bg-red-200 disabled:opacity-50 text-red-600 p-2 rounded-lg transition-colors"
-                        title="Eliminar producto"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+            <tbody className="divide-y divide-gray-100">
+              {products.map(product => {
+                const isEditing = editingId === product.id
+                return (
+                  <tr
+                    key={product.id}
+                    className={`transition-colors ${isEditing ? 'bg-amber-50' : 'hover:bg-gray-50'}`}
+                  >
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-2.5">
+                        {isEditing && (
+                          <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-amber-500" />
+                        )}
+                        <span className={`font-semibold ${isEditing ? 'text-amber-800' : 'text-gray-800'} line-clamp-1`}>
+                          {product.name}
+                        </span>
+                      </div>
+                    </td>
+
+                    <td className="px-5 py-3.5 hidden sm:table-cell">
+                      <span className="inline-block text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-0.5 rounded-full whitespace-nowrap">
+                        {product.category_name || 'Sin categoría'}
+                      </span>
+                    </td>
+
+                    <td className="px-5 py-3.5 hidden md:table-cell">
+                      {product.marca ? (
+                        <span className="inline-block text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-100 px-2.5 py-0.5 rounded-full">
+                          {product.marca}
+                        </span>
+                      ) : (
+                        <span className="text-gray-300 text-xs">—</span>
+                      )}
+                    </td>
+
+                    <td className="px-5 py-3.5 text-right">
+                      <span className="font-bold text-emerald-700 whitespace-nowrap">
+                        {fmt(product.price)}
+                      </span>
+                    </td>
+
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => onEdit(product)}
+                          disabled={submitting}
+                          title="Editar"
+                          className="p-1.5 rounded-lg text-blue-500 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-40 transition-colors"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => onDelete(product)}
+                          disabled={submitting}
+                          title="Eliminar"
+                          className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-40 transition-colors"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
