@@ -18,12 +18,21 @@ envContent.split('\n').forEach(line => {
 const supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
 async function run() {
-  const { data, error } = await supabase.from('products').select('*').limit(1);
+  const { data, error } = await supabase.from('club_orders').insert([{
+    user_dni: null,
+    items: [{ id: 999, name: 'TEST PRODUCT', price: 100, quantity: 1 }],
+    total: 100,
+    status: 'Pendiente',
+    points_awarded: false
+  }]).select();
+  
   if (error) {
-    console.error('Error selecting *:', error);
+    console.error('Error inserting with null user_dni:', error);
   } else {
-    console.log('Selected columns:', Object.keys(data[0] || {}));
-    console.log('Sample data:', data[0]);
+    console.log('Successfully inserted order with null user_dni:', data);
+    // Clean up
+    await supabase.from('club_orders').delete().eq('id', data[0].id);
+    console.log('Cleaned up test order.');
   }
 }
 

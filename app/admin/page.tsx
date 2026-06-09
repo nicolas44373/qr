@@ -554,8 +554,9 @@ export default function AdminPage() {
                     <tr>
                       <th className="px-6 py-4">ID Pedido</th>
                       <th className="px-6 py-4">Fecha</th>
-                      <th className="px-6 py-4">Socio Club</th>
+                      <th className="px-6 py-4">Cliente / Socio</th>
                       <th className="px-6 py-4">Celular</th>
+                      <th className="px-6 py-4">Dirección de Entrega</th>
                       <th className="px-6 py-4">Detalle del Pedido</th>
                       <th className="px-6 py-4 text-right">Total</th>
                       <th className="px-6 py-4 text-center">Puntos a Sumar</th>
@@ -585,12 +586,42 @@ export default function AdminPage() {
                                   #{order.club_users.club_code}
                                 </p>
                               </div>
+                            ) : order.customer_name ? (
+                              <div>
+                                <p className="font-bold text-gray-800">
+                                  {order.customer_name}
+                                </p>
+                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider leading-none mt-1">
+                                  👤 Cliente Invitado
+                                </p>
+                              </div>
                             ) : (
                               <span className="text-red-500 text-xs">Socio Eliminado ({order.user_dni})</span>
                             )}
                           </td>
                           <td className="px-6 py-4 text-xs font-medium text-gray-600">
-                            {order.club_users?.celular || '—'}
+                            {order.club_users?.celular || order.customer_phone || '—'}
+                          </td>
+                          <td className="px-6 py-4 max-w-[200px] truncate text-xs text-gray-500 font-semibold" title={order.customer_address || 'Sin registrar'}>
+                            {order.customer_address ? (
+                              <div className="flex items-center gap-1.5">
+                                <span>📍</span>
+                                <span className="truncate">{order.customer_address}</span>
+                                {order.customer_lat && order.customer_lng && (
+                                  <a
+                                    href={`https://www.google.com/maps?q=${order.customer_lat},${order.customer_lng}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-amber-500 hover:text-amber-700 font-bold hover:scale-110 transition-transform ml-0.5"
+                                    title="Ver mapa GPS"
+                                  >
+                                    🗺️
+                                  </a>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-300 italic">No registrada</span>
+                            )}
                           </td>
                           <td className="px-6 py-4 max-w-[200px] truncate text-xs text-gray-500 font-semibold" title={itemsDetail}>
                             {itemsDetail}

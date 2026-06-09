@@ -52,7 +52,7 @@ export default function CartDrawer() {
     updateProfile 
   } = useClub()
 
-  const [step, setStep] = useState(1) // 1: Carrito, 2: Envío, 3: Confirmación
+  const [step, setStep] = useState(1) // 1: Carrito, 2: Envío, 3: Confirmación, 4: Pedido Listo
   const [isMovingForward, setIsMovingForward] = useState(true)
   const [errors, setErrors] = useState({})
   
@@ -62,6 +62,11 @@ export default function CartDrawer() {
   const [loadedFromCodeUser, setLoadedFromCodeUser] = useState(null)
   
   const [submittingOrder, setSubmittingOrder] = useState(false)
+
+  // States para la confirmación robusta de pedidos
+  const [generatedOrderId, setGeneratedOrderId] = useState(null)
+  const [whatsappMessage, setWhatsappMessage] = useState('')
+  const [copied, setCopied] = useState(false)
 
   // Auto-rellenar si el usuario está logueado
   useEffect(() => {
@@ -138,8 +143,8 @@ export default function CartDrawer() {
     }
   }
 
-  // ── Enviar por WhatsApp ──
-  const sendToWhatsApp = async () => {
+  // ── Confirmar y Registrar Pedido ──
+  const confirmAndRegisterOrder = async () => {
     if (items.length === 0) return
     if (!validateForm()) return
 
@@ -149,39 +154,46 @@ export default function CartDrawer() {
 
     // Si el usuario está logueado, actualizamos sus datos en su perfil para la próxima
     if (user) {
-      await updateProfile({
-        direccion: customer.direccion,
-        referencia: customer.referencia,
-        lat: customer.lat,
-        lng: customer.lng,
-        celular: customer.celular
-      })
-    }
-
-    // Registrar pedido en la base de datos de club_orders
-    if (activeDni) {
       try {
-        const orderPayload = {
-          user_dni: activeDni,
-          items: items.map(i => ({ id: i.id, name: i.name, quantity: i.quantity, price: i.price, unit: i.unit })),
-          total: total,
-          status: 'Pendiente',
-          points_awarded: false
-        }
-        
-        const { data, error } = await supabase
-          .from('club_orders')
-          .insert([orderPayload])
-          .select()
-        
-        if (error) throw error
-        orderId = data?.[0]?.id
-      } catch (e) {
-        console.error('Error al registrar pedido del Club en Supabase:', e)
+        await updateProfile({
+          direccion: customer.direccion,
+          referencia: customer.referencia,
+          lat: customer.lat,
+          lng: customer.lng,
+          celular: customer.celular
+        })
+      } catch (err) {
+        console.error('Error al actualizar perfil del socio:', err)
       }
     }
 
-    setSubmittingOrder(false)
+    // Registrar pedido en la base de datos de club_orders de forma universal
+    try {
+      const orderPayload = {
+        user_dni: activeDni || null,
+        items: items.map(i => ({ id: i.id, name: i.name, quantity: i.quantity, price: i.price, unit: i.unit })),
+        total: total,
+        status: 'Pendiente',
+        points_awarded: false,
+        customer_name: customer.nombre,
+        customer_phone: customer.celular,
+        customer_address: customer.direccion,
+        customer_lat: String(customer.lat || ''),
+        customer_lng: String(customer.lng || '')
+      }
+      
+      const { data, error } = await supabase
+        .from('club_orders')
+        .insert([orderPayload])
+        .select()
+      
+      if (error) throw error
+      orderId = data?.[0]?.id
+      setGeneratedOrderId(orderId)
+    } catch (e) {
+      console.error('Error al registrar pedido en Supabase:', e)
+    }
+
     const date = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
     
     // Lista de ítems formateada de manera muy clara
@@ -226,9 +238,21 @@ export default function CartDrawer() {
       '¡Muchas gracias! 🙌',
     ].filter(l => l !== null).join('\n')
 
-    window.open(`https://wa.me/+5493812224766?text=${encodeURIComponent(message)}`, '_blank')
+    setWhatsappMessage(message)
+    setStep(4)
+    setSubmittingOrder(false)
+  }
+
+  const handleFinalizeWhatsApp = () => {
+    window.open(`https://wa.me/+5493812224766?text=${encodeURIComponent(whatsappMessage)}`, '_blank')
     clearCart()
     setIsOpen(false)
+  }
+
+  const handleCopyMessage = () => {
+    navigator.clipboard.writeText(whatsappMessage)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2050)
   }
 
   // Reset del step al abrir/cerrar
@@ -239,6 +263,9 @@ export default function CartDrawer() {
         setClubCodeInput('')
         setCodeSearchStatus(null)
         setLoadedFromCodeUser(null)
+        setGeneratedOrderId(null)
+        setWhatsappMessage('')
+        setCopied(false)
       }, 300)
     }
   }, [isOpen])
@@ -283,7 +310,7 @@ export default function CartDrawer() {
         </div>
 
         {/* Stepper Indicator */}
-        {items.length > 0 && (
+        {items.length > 0 && step <= 3 && (
           <div className="bg-white border-b border-gray-100 px-5 py-4 shrink-0 flex flex-col items-center gap-3">
             {/* Circles Row */}
             <div className="flex items-center justify-center w-full max-w-[240px]">
@@ -672,73 +699,139 @@ export default function CartDrawer() {
                     </div>
                   </motion.div>
                 )}
+
+                {step === 4 && (
+                  <motion.div
+                    key="step-4"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="flex flex-col items-center justify-center text-center py-10 px-2 space-y-6 animate-in fade-in zoom-in-95 duration-200"
+                  >
+                    <div className="w-20 h-20 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-500 animate-bounce">
+                      <CheckCircle2 className="w-12 h-12" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <h3 className="text-xl font-extrabold text-gray-900 animate-pulse">¡Pedido Registrado!</h3>
+                      <p className="text-sm text-gray-500 max-w-xs leading-relaxed mx-auto font-medium">
+                        Tu compra ha sido cargada con éxito en nuestro sistema de reparto.
+                      </p>
+                    </div>
+
+                    {generatedOrderId && (
+                      <div className="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-700 text-xs font-black px-4 py-2 rounded-2xl font-mono shadow-sm">
+                        🆔 Pedido Nro: #{generatedOrderId}
+                      </div>
+                    )}
+
+                    <div className="bg-white border border-gray-100 rounded-3xl p-5 shadow-sm space-y-4 max-w-xs w-full">
+                      <p className="text-xs text-gray-500 leading-normal font-semibold">
+                        Para coordinar el pago y la entrega, envía el detalle del pedido a nuestro WhatsApp haciendo clic abajo.
+                      </p>
+                      
+                      <button
+                        onClick={handleFinalizeWhatsApp}
+                        className="w-full flex items-center justify-center gap-2.5 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-black py-3.5 px-4 rounded-xl shadow-lg hover:shadow-xl active:scale-95 transition-all text-sm cursor-pointer"
+                      >
+                        <svg className="w-4.5 h-4.5 fill-current" viewBox="0 0 24 24">
+                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                        </svg>
+                        Enviar a WhatsApp
+                      </button>
+                    </div>
+
+                    <div className="flex flex-col gap-2 w-full max-w-xs">
+                      <button
+                        type="button"
+                        onClick={handleCopyMessage}
+                        className="text-xs font-bold text-gray-500 hover:text-amber-500 transition-colors flex items-center justify-center gap-1 bg-gray-150 hover:bg-amber-50 border border-gray-200/60 py-2.5 rounded-xl cursor-pointer"
+                      >
+                        {copied ? '¡Copiado con éxito! ✓' : '📋 Copiar detalle del pedido'}
+                      </button>
+                      
+                      <button
+                        type="button"
+                        onClick={() => {
+                          clearCart()
+                          setIsOpen(false)
+                        }}
+                        className="text-xs font-bold text-gray-400 hover:text-gray-600 transition-colors py-2 cursor-pointer"
+                      >
+                        Volver al Catálogo sin enviar
+                      </button>
+                    </div>
+
+                  </motion.div>
+                )}
               </AnimatePresence>
             </div>
 
             {/* Footer con cálculo de importes y acciones */}
-            <div className="border-t border-gray-100 bg-white px-5 py-4 space-y-3 shrink-0 shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
-              {/* Resumen Financiero */}
-              <div className="space-y-1.5 text-xs font-semibold text-gray-500 bg-gray-50 border border-gray-100 rounded-2xl p-4">
-                <div className="flex items-center justify-between">
-                  <p>Subtotal de productos</p>
-                  <p className="text-gray-800 font-bold">{fmt(total.toString())}</p>
+            {step <= 3 && (
+              <div className="border-t border-gray-100 bg-white px-5 py-4 space-y-3 shrink-0 shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
+                {/* Resumen Financiero */}
+                <div className="space-y-1.5 text-xs font-semibold text-gray-500 bg-gray-50 border border-gray-100 rounded-2xl p-4">
+                  <div className="flex items-center justify-between">
+                    <p>Subtotal de productos</p>
+                    <p className="text-gray-800 font-bold">{fmt(total.toString())}</p>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="flex items-center gap-1 text-emerald-600 font-bold">
+                      <Truck className="h-3.5 w-3.5" /> Envío de entrega
+                    </p>
+                    <p className="text-emerald-600 font-bold uppercase">Gratis</p>
+                  </div>
+                  <div className="h-px bg-gray-200/60 my-2" />
+                  <div className="flex items-center justify-between text-sm text-gray-900 font-black">
+                    <p>Total Estimado</p>
+                    <p className="text-lg text-emerald-700 tracking-tight font-extrabold">{fmt(total.toString())}</p>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <p className="flex items-center gap-1 text-emerald-600 font-bold">
-                    <Truck className="h-3.5 w-3.5" /> Envío de entrega
-                  </p>
-                  <p className="text-emerald-600 font-bold uppercase">Gratis</p>
-                </div>
-                <div className="h-px bg-gray-200/60 my-2" />
-                <div className="flex items-center justify-between text-sm text-gray-900 font-black">
-                  <p>Total Estimado</p>
-                  <p className="text-lg text-emerald-700 tracking-tight font-extrabold">{fmt(total.toString())}</p>
+
+                {/* Botones de acción */}
+                <div className="flex gap-2">
+                  {step > 1 && (
+                    <button
+                      type="button"
+                      onClick={handlePrevStep}
+                      disabled={submittingOrder}
+                      className="px-4 py-3.5 rounded-2xl border border-gray-200 hover:border-gray-300 text-gray-600 font-extrabold flex items-center justify-center transition-all bg-white hover:bg-gray-50 active:scale-95 shadow-sm disabled:opacity-50"
+                    >
+                      <ArrowLeft className="h-5 w-5" />
+                    </button>
+                  )}
+
+                  {step < 3 ? (
+                    <button
+                      type="button"
+                      onClick={handleNextStep}
+                      className="flex-1 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-extrabold py-3.5 rounded-2xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 text-sm active:scale-98 animate-none"
+                    >
+                      Continuar
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={confirmAndRegisterOrder}
+                      disabled={submittingOrder}
+                      className="flex-1 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-black py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2.5 text-base active:scale-[0.97] hover:scale-[1.01] disabled:opacity-50 cursor-pointer"
+                    >
+                      {submittingOrder ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : (
+                        <>
+                          <Check className="w-5 h-5 shrink-0" />
+                          Confirmar Pedido
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
-
-              {/* Botones de acción */}
-              <div className="flex gap-2">
-                {step > 1 && (
-                  <button
-                    type="button"
-                    onClick={handlePrevStep}
-                    disabled={submittingOrder}
-                    className="px-4 py-3.5 rounded-2xl border border-gray-200 hover:border-gray-300 text-gray-600 font-extrabold flex items-center justify-center transition-all bg-white hover:bg-gray-50 active:scale-95 shadow-sm disabled:opacity-50"
-                  >
-                    <ArrowLeft className="h-5 w-5" />
-                  </button>
-                )}
-
-                {step < 3 ? (
-                  <button
-                    type="button"
-                    onClick={handleNextStep}
-                    className="flex-1 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-extrabold py-3.5 rounded-2xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 text-sm active:scale-98"
-                  >
-                    Continuar
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={sendToWhatsApp}
-                    disabled={submittingOrder}
-                    className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-black py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2.5 text-base active:scale-[0.97] hover:scale-[1.01] disabled:opacity-50"
-                  >
-                    {submittingOrder ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                      <>
-                        <svg className="w-5 h-5 shrink-0 fill-current" viewBox="0 0 24 24">
-                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                        </svg>
-                        Confirmar por WhatsApp
-                      </>
-                    )}
-                  </button>
-                )}
-              </div>
-            </div>
+            )}
           </div>
         )}
       </div>
