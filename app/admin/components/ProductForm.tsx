@@ -7,15 +7,15 @@ type Props = {
   isEditing: boolean
   categories: any[]
   submitting: boolean
-  initialData: { name?: string; price?: string; unit?: string; category_id?: string; marca?: string } | null
-  onSubmit: (data: { name: string; price: string; unit?: string; category_id: string; marca?: string }) => Promise<any>
+  initialData: { name?: string; price?: string; unit?: string; category_id?: string; marca?: string; in_stock?: boolean } | null
+  onSubmit: (data: { name: string; price: string; unit?: string; category_id: string; marca?: string; in_stock: boolean }) => Promise<any>
   onCancel: () => void
 }
 
 const field = 'w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition-all'
 
 export default function ProductForm({ isVisible, isEditing, categories, submitting, initialData, onSubmit, onCancel }: Props) {
-  const [form, setForm] = useState({ name: '', price: '', unit: '', category_id: '', marca: '' })
+  const [form, setForm] = useState({ name: '', price: '', unit: '', category_id: '', marca: '', in_stock: true })
 
   useEffect(() => {
     if (initialData) {
@@ -25,13 +25,14 @@ export default function ProductForm({ isVisible, isEditing, categories, submitti
         unit:        initialData.unit        ?? '',
         category_id: initialData.category_id ?? '',
         marca:       initialData.marca       ?? '',
+        in_stock:    initialData.in_stock    ?? true,
       })
     } else {
-      setForm({ name: '', price: '', unit: '', category_id: '', marca: '' })
+      setForm({ name: '', price: '', unit: '', category_id: '', marca: '', in_stock: true })
     }
   }, [initialData])
 
-  const set = (key: string, value: string) => setForm(f => ({ ...f, [key]: value }))
+  const set = (key: string, value: any) => setForm(f => ({ ...f, [key]: value }))
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -41,6 +42,7 @@ export default function ProductForm({ isVisible, isEditing, categories, submitti
       unit:        form.unit.trim() || undefined,
       category_id: form.category_id,
       marca:       form.marca.trim() || undefined,
+      in_stock:    form.in_stock,
     })
   }
 
@@ -146,6 +148,21 @@ export default function ProductForm({ isVisible, isEditing, categories, submitti
               className={field}
             />
           </div>
+
+          {/* Stock Switch — ancho completo */}
+          <div className="sm:col-span-2 flex items-center gap-3 bg-gray-50 border border-gray-150 rounded-xl px-4 py-3">
+            <input
+              type="checkbox"
+              id="form_in_stock"
+              checked={form.in_stock}
+              onChange={e => set('in_stock', e.target.checked)}
+              className="w-5 h-5 rounded border-gray-300 text-amber-500 focus:ring-amber-400 cursor-pointer"
+            />
+            <label htmlFor="form_in_stock" className="text-sm font-bold text-gray-700 cursor-pointer select-none">
+              Hay stock disponible de este producto
+            </label>
+          </div>
+
         </div>
 
         {/* Acciones */}

@@ -1,160 +1,275 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useCart } from '../context/CartContext'
+import { useClub } from '../context/ClubContext'
+import { supabase } from '@/lib/supabase'
+import MapInput from './MapInput'
+import { 
+  ShoppingCart, 
+  X, 
+  Trash2, 
+  Plus, 
+  Minus, 
+  ArrowRight, 
+  ArrowLeft, 
+  MapPin, 
+  User, 
+  Phone, 
+  FileText, 
+  Check, 
+  Truck,
+  CheckCircle2,
+  Trophy,
+  Loader2,
+  Lock
+} from 'lucide-react'
 
 const fmt = (value) => {
   const n = parseFloat(value || 0)
   return `$ ${n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
-const inputCls = (error) =>
-  `w-full px-3.5 py-2.5 rounded-xl border text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 transition-all ${
-    error
-      ? 'border-red-300 focus:ring-red-300 bg-red-50'
-      : 'border-gray-200 focus:ring-amber-400 focus:border-amber-400 bg-white'
-  }`
-
-// ── Definido FUERA del drawer para evitar el bug de re-mount ──
-function Field({ label, placeholder, required, type = 'text', value, onChange, error }) {
-  return (
-    <div>
-      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">
-        {label} {required && <span className="text-red-400">*</span>}
-      </label>
-      <input
-        type={type}
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        className={inputCls(error)}
-      />
-      {error && <p className="text-red-500 text-xs mt-1 font-medium">{error}</p>}
-    </div>
-  )
-}
-
 export default function CartDrawer() {
-  const { items, removeItem, updateQty, clearCart, count, total, isOpen, setIsOpen, customer, updateCustomer } = useCart()
+  const { 
+    items, 
+    removeItem, 
+    updateQty, 
+    clearCart, 
+    count, 
+    total, 
+    isOpen, 
+    setIsOpen, 
+    customer, 
+    updateCustomer 
+  } = useCart()
 
-  const [errors, setErrors]       = useState({})
-  const [dni, setDni]             = useState('')
-  const [dniStatus, setDniStatus] = useState(null)   // 'found' | 'not-found' | null
-  const [saveData, setSaveData]   = useState(false)
+  const { 
+    user, 
+    openClubModal, 
+    fetchUserByCode, 
+    updateProfile 
+  } = useClub()
 
-  const STORAGE_KEY = (d) => `alenort-cliente-${d.trim()}`
+  const [step, setStep] = useState(1) // 1: Carrito, 2: Envío, 3: Confirmación
+  const [isMovingForward, setIsMovingForward] = useState(true)
+  const [errors, setErrors] = useState({})
+  
+  // States para el código del club
+  const [clubCodeInput, setClubCodeInput] = useState('')
+  const [codeSearchStatus, setCodeSearchStatus] = useState(null) // 'searching' | 'found' | 'not-found' | null
+  const [loadedFromCodeUser, setLoadedFromCodeUser] = useState(null)
+  
+  const [submittingOrder, setSubmittingOrder] = useState(false)
 
-  // ── Buscar datos por DNI ──
-  const handleLookup = () => {
-    const key = dni.trim()
-    if (!key) return
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY(key))
-      if (raw) {
-        const saved = JSON.parse(raw)
-        updateCustomer('nombre',     saved.nombre     || '')
-        updateCustomer('celular',    saved.celular     || '')
-        updateCustomer('direccion',  saved.direccion  || '')
-        updateCustomer('referencia', saved.referencia || '')
-        setDniStatus('found')
-        setErrors({})
-      } else {
-        setDniStatus('not-found')
-      }
-    } catch {
-      setDniStatus('not-found')
+  // Auto-rellenar si el usuario está logueado
+  useEffect(() => {
+    if (user && isOpen) {
+      updateCustomer('nombre', `${user.nombre} ${user.apellido}`)
+      updateCustomer('celular', user.celular)
+      updateCustomer('direccion', user.direccion || '')
+      updateCustomer('referencia', user.referencia || '')
+      if (user.lat) updateCustomer('lat', parseFloat(user.lat))
+      if (user.lng) updateCustomer('lng', parseFloat(user.lng))
+    }
+  }, [user, isOpen, updateCustomer])
+
+  // Buscar usuario del club por código de 4 dígitos
+  const handleCodeLookup = async () => {
+    const code = clubCodeInput.trim()
+    if (!code || code.length !== 4) return
+    
+    setCodeSearchStatus('searching')
+    const found = await fetchUserByCode(code)
+    
+    if (found) {
+      setLoadedFromCodeUser(found)
+      updateCustomer('nombre', `${found.nombre} ${found.apellido}`)
+      updateCustomer('celular', found.celular)
+      updateCustomer('direccion', found.direccion || '')
+      updateCustomer('referencia', found.referencia || '')
+      if (found.lat) updateCustomer('lat', parseFloat(found.lat))
+      if (found.lng) updateCustomer('lng', parseFloat(found.lng))
+      setCodeSearchStatus('found')
+      setErrors({})
+    } else {
+      setCodeSearchStatus('not-found')
+      setLoadedFromCodeUser(null)
     }
   }
 
   // ── Validación ──
-  const validate = () => {
+  const validateForm = () => {
     const e = {}
-    if (!customer.nombre.trim())    e.nombre    = 'El nombre es requerido'
-    if (!customer.celular.trim())   e.celular   = 'El celular es requerido'
-    if (!customer.direccion.trim()) e.direccion = 'La dirección es requerida'
+    if (!customer.nombre.trim()) e.nombre = 'El nombre es requerido'
+    if (!customer.celular.trim()) e.celular = 'El celular es requerido'
+    if (!customer.direccion.trim() || customer.direccion.length < 5) {
+      e.direccion = 'Ingresá una dirección de entrega válida'
+    }
+    if (!customer.lat || !customer.lng) {
+      e.direccion = 'Por favor, selecciona una ubicación en el buscador o el mapa'
+    }
     setErrors(e)
     return Object.keys(e).length === 0
   }
 
-  const clearField = (field) => (e) => {
-    updateCustomer(field, e.target.value)
-    if (errors[field]) setErrors(p => ({ ...p, [field]: null }))
+  const handleNextStep = () => {
+    if (step === 1) {
+      setIsMovingForward(true)
+      setStep(2)
+    } else if (step === 2) {
+      if (validateForm()) {
+        setIsMovingForward(true)
+        setStep(3)
+      }
+    }
+  }
+
+  const handlePrevStep = () => {
+    setIsMovingForward(false)
+    setStep(prev => prev - 1)
+  }
+
+  const handleFieldChange = (field, value) => {
+    updateCustomer(field, value)
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: null }))
+    }
   }
 
   // ── Enviar por WhatsApp ──
-  const sendToWhatsApp = () => {
+  const sendToWhatsApp = async () => {
     if (items.length === 0) return
-    if (!validate()) return
+    if (!validateForm()) return
 
-    // Guardar si el cliente lo pidió
-    if (saveData && dni.trim()) {
-      localStorage.setItem(STORAGE_KEY(dni), JSON.stringify({
-        nombre:     customer.nombre,
-        celular:    customer.celular,
-        direccion:  customer.direccion,
+    setSubmittingOrder(true)
+    let orderId = null
+    const activeDni = user?.dni || loadedFromCodeUser?.dni
+
+    // Si el usuario está logueado, actualizamos sus datos en su perfil para la próxima
+    if (user) {
+      await updateProfile({
+        direccion: customer.direccion,
         referencia: customer.referencia,
-      }))
+        lat: customer.lat,
+        lng: customer.lng,
+        celular: customer.celular
+      })
     }
 
-    const date  = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    // Registrar pedido en la base de datos de club_orders
+    if (activeDni) {
+      try {
+        const orderPayload = {
+          user_dni: activeDni,
+          items: items.map(i => ({ id: i.id, name: i.name, quantity: i.quantity, price: i.price, unit: i.unit })),
+          total: total,
+          status: 'Pendiente',
+          points_awarded: false
+        }
+        
+        const { data, error } = await supabase
+          .from('club_orders')
+          .insert([orderPayload])
+          .select()
+        
+        if (error) throw error
+        orderId = data?.[0]?.id
+      } catch (e) {
+        console.error('Error al registrar pedido del Club en Supabase:', e)
+      }
+    }
+
+    setSubmittingOrder(false)
+    const date = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    
+    // Lista de ítems formateada de manera muy clara
     const lines = items.map(item => {
-      const sub  = parseFloat(item.price || 0) * item.quantity
+      const sub = parseFloat(item.price || 0) * item.quantity
       const unit = item.unit ? ` (${item.unit})` : ''
-      return `  • ${item.name}${unit}\n    Cantidad: ${item.quantity} × ${fmt(item.price)} = *${fmt(sub.toString())}*`
+      return `  • *${item.quantity}* × ${item.name}${unit}\n    Subtotal: *${fmt(sub.toString())}*`
     })
 
+    // Crear link de Google Maps con las coordenadas precisas
+    const gmapsLink = `https://www.google.com/maps?q=${customer.lat},${customer.lng}`
+    const clubCode = user?.club_code || loadedFromCodeUser?.club_code
+
     const message = [
-      '🛒 *PEDIDO — ALENORT*',
+      '🛒 *NUEVO PEDIDO — ALENORT*',
       `📅 Fecha: ${date}`,
+      orderId ? `🆔 *ID Pedido Club:* #${orderId}` : null,
+      clubCode ? `⭐ *Socio Club Alenort:* #${clubCode}` : null,
       '',
-      '─────────────────────',
-      '👤 *Datos del cliente:*',
-      `  • Nombre: ${customer.nombre}`,
-      `  • Celular: ${customer.celular}`,
-      `  • Dirección: ${customer.direccion}`,
-      customer.referencia.trim() ? `  • Referencia: ${customer.referencia}` : null,
+      '━━━━━━━━━━━━━━━━━━━━━',
+      '👤 *DATOS DE ENTREGA:*',
+      `  • *Nombre:* ${customer.nombre}`,
+      `  • *Celular:* ${customer.celular}`,
+      `  • *Dirección:* ${customer.direccion}`,
+      customer.referencia.trim() ? `  • *Referencia:* ${customer.referencia}` : null,
+      `  • *Ubicación del Pin (GPS):* ${gmapsLink}`,
       '',
-      '─────────────────────',
-      '📦 *Detalle del pedido:*',
+      '━━━━━━━━━━━━━━━━━━━━━',
+      '📦 *DETALLE DE PRODUCTOS:*',
       '',
       ...lines,
       '',
-      '─────────────────────',
+      '━━━━━━━━━━━━━━━━━━━━━',
       `💰 *TOTAL ESTIMADO: ${fmt(total.toString())}*`,
-      '─────────────────────',
+      '━━━━━━━━━━━━━━━━━━━━━',
       '',
-      '⏰ Horario de pedidos: 8:30 a 20:00 hs',
-      '🚚 Reparto al día siguiente · 9:00 a 15:00 hs',
+      '🚚 Envíos 100% GRATIS',
+      '🕗 Horario: 8:30 a 20:00 hs (Reparto al día siguiente)',
+      clubCode ? '🎁 Este pedido sumará puntos Club Alenort al confirmarse.' : null,
       '',
-      'Por favor confirmen disponibilidad y datos de entrega.',
+      'Por favor confirmen disponibilidad y costo final de los productos.',
       '¡Muchas gracias! 🙌',
     ].filter(l => l !== null).join('\n')
 
     window.open(`https://wa.me/+5493812224766?text=${encodeURIComponent(message)}`, '_blank')
+    clearCart()
+    setIsOpen(false)
   }
+
+  // Reset del step al abrir/cerrar
+  useEffect(() => {
+    if (!isOpen) {
+      setTimeout(() => {
+        setStep(1)
+        setClubCodeInput('')
+        setCodeSearchStatus(null)
+        setLoadedFromCodeUser(null)
+      }, 300)
+    }
+  }, [isOpen])
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop con Blur */}
       <div
         onClick={() => setIsOpen(false)}
-        className={`fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-opacity duration-300 ${
+        className={`fixed inset-0 bg-black/50 backdrop-blur-md z-40 transition-opacity duration-300 ${
           isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
       />
 
       {/* Drawer */}
-      <div className={`fixed top-0 right-0 h-full w-full sm:w-[420px] bg-white shadow-2xl z-50 flex flex-col transition-transform duration-300 ease-in-out ${
+      <div className={`fixed top-0 right-0 h-full w-full sm:w-[480px] bg-gray-50 shadow-2xl z-50 flex flex-col overflow-hidden transition-transform duration-300 ease-in-out ${
         isOpen ? 'translate-x-0' : 'translate-x-full'
       }`}>
-
+        
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 bg-white border-b border-gray-100 shrink-0">
           <div className="flex items-center gap-2.5">
-            <span className="text-2xl">🛒</span>
-            <h2 className="font-extrabold text-gray-900 text-lg">Mi Pedido</h2>
+            <div className="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center text-white shadow-md">
+              <ShoppingCart className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="font-extrabold text-gray-900 text-base leading-none">Mi Pedido</h2>
+              <p className="text-[10px] text-gray-400 font-medium mt-1 font-semibold">Club Alenort Integrado</p>
+            </div>
             {count > 0 && (
-              <span className="bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[22px] text-center">
+              <span className="bg-amber-500 text-white text-xs font-black px-2.5 py-0.5 rounded-full shadow-sm ml-1">
                 {count}
               </span>
             )}
@@ -163,201 +278,468 @@ export default function CartDrawer() {
             onClick={() => setIsOpen(false)}
             className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Vacío */}
+        {/* Stepper Indicator */}
+        {items.length > 0 && (
+          <div className="bg-white border-b border-gray-100 px-5 py-4 shrink-0 flex flex-col items-center gap-3">
+            {/* Circles Row */}
+            <div className="flex items-center justify-center w-full max-w-[240px]">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-extrabold text-xs shadow-sm transition-all shrink-0 ${
+                step >= 1 ? 'bg-amber-500 text-white ring-4 ring-amber-100' : 'bg-gray-100 text-gray-400'
+              }`}>
+                {step > 1 ? <Check className="h-4 w-4" /> : '1'}
+              </div>
+              <div className={`flex-1 h-1 transition-colors mx-1 ${step >= 2 ? 'bg-amber-500' : 'bg-gray-100'}`} />
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-extrabold text-xs shadow-sm transition-all shrink-0 ${
+                step >= 2 ? 'bg-amber-500 text-white ring-4 ring-amber-100' : 'bg-gray-100 text-gray-400'
+              }`}>
+                {step > 2 ? <Check className="h-4 w-4" /> : '2'}
+              </div>
+              <div className={`flex-1 h-1 transition-colors mx-1 ${step >= 3 ? 'bg-amber-500' : 'bg-gray-100'}`} />
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-extrabold text-xs shadow-sm transition-all shrink-0 ${
+                step >= 3 ? 'bg-amber-500 text-white ring-4 ring-amber-100' : 'bg-gray-100 text-gray-400'
+              }`}>
+                3
+              </div>
+            </div>
+            {/* Active Step Label */}
+            <span className="text-xs font-black text-gray-800 uppercase tracking-widest leading-none mt-0.5">
+              {step === 1 && '1. Resumen de tu pedido'}
+              {step === 2 && '2. Datos de envío y mapa'}
+              {step === 3 && '3. Confirmar pedido'}
+            </span>
+          </div>
+        )}
+
+        {/* Content */}
         {items.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
-            <div className="text-7xl mb-5">🛒</div>
-            <p className="font-extrabold text-gray-800 text-xl mb-2">Tu pedido está vacío</p>
-            <p className="text-gray-400 text-sm mb-8">Explorá el catálogo y agregá los productos que querés</p>
+            <div className="w-20 h-20 rounded-full bg-amber-50 flex items-center justify-center text-amber-500 mb-6 border border-amber-100">
+              <ShoppingCart className="h-10 w-10 animate-bounce" />
+            </div>
+            <p className="font-extrabold text-gray-800 text-lg mb-1.5">Tu pedido está vacío</p>
+            <p className="text-gray-400 text-sm max-w-xs mb-8 leading-relaxed">
+              Explorá el catálogo de Alenort y agrega productos para comenzar tu pedido mayorista.
+            </p>
             <button
               onClick={() => setIsOpen(false)}
-              className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-2xl transition-colors text-sm shadow-sm"
+              className="px-6 py-3.5 bg-amber-500 hover:bg-amber-600 text-white font-extrabold rounded-2xl transition-all text-sm shadow-md hover:shadow-lg active:scale-95"
             >
-              Ver catálogo →
+              Explorar Catálogo →
             </button>
           </div>
         ) : (
-          <>
-            <div className="flex-1 overflow-y-auto">
-
-              {/* ── Productos ── */}
-              <div className="px-4 pt-4 pb-2 space-y-3">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">Productos</p>
-                {items.map(item => {
-                  const subtotal = parseFloat(item.price || 0) * item.quantity
-                  return (
-                    <div key={item.id} className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
-                      <div className="flex items-start justify-between gap-2 mb-3">
-                        <div className="min-w-0">
-                          <p className="font-bold text-gray-900 text-sm leading-snug line-clamp-2">{item.name}</p>
-                          {item.categoryName && <p className="text-xs text-gray-400 mt-0.5">{item.categoryName}</p>}
-                          <p className="text-xs text-gray-400 mt-0.5">{fmt(item.price)} c/u</p>
-                        </div>
-                        <button
-                          onClick={() => removeItem(item.id)}
-                          className="shrink-0 p-1 text-gray-300 hover:text-red-500 rounded-lg transition-colors"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => updateQty(item.id, item.quantity - 1)}
-                            className="w-8 h-8 rounded-xl border border-gray-200 bg-white flex items-center justify-center text-gray-600 hover:border-red-300 hover:text-red-500 transition-colors font-bold text-lg leading-none"
-                          >−</button>
-                          <span className="w-8 text-center font-extrabold text-gray-900">{item.quantity}</span>
-                          <button
-                            onClick={() => updateQty(item.id, item.quantity + 1)}
-                            className="w-8 h-8 rounded-xl border border-gray-200 bg-white flex items-center justify-center text-gray-600 hover:border-emerald-300 hover:text-emerald-600 transition-colors font-bold text-lg leading-none"
-                          >+</button>
-                        </div>
-                        <p className="font-extrabold text-emerald-700 text-base">{fmt(subtotal.toString())}</p>
-                      </div>
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden px-5 py-4">
+              <AnimatePresence mode="wait">
+                {step === 1 && (
+                  <motion.div
+                    key="step-1"
+                    initial={{ opacity: 0, x: isMovingForward ? 30 : -30 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: isMovingForward ? -30 : 30 }}
+                    transition={{ duration: 0.2 }}
+                    className="space-y-4"
+                  >
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-xs font-extrabold text-gray-400 uppercase tracking-widest">Productos seleccionados</span>
+                      <button 
+                        onClick={clearCart}
+                        className="text-xs font-bold text-red-500 hover:text-red-700 transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 border border-red-100/50 cursor-pointer shadow-sm"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" /> Limpiar
+                      </button>
                     </div>
-                  )
-                })}
-              </div>
 
-              {/* ── Datos del cliente ── */}
-              <div className="px-4 pt-3 pb-6 space-y-4">
+                    <div className="space-y-3">
+                      {items.map(item => {
+                        const subtotal = parseFloat(item.price || 0) * item.quantity
+                        return (
+                          <div key={item.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-col gap-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="font-bold text-gray-900 text-sm leading-snug line-clamp-2">{item.name}</p>
+                                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                  {item.categoryName && (
+                                    <span className="text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-100 px-2 py-0.5 rounded-full">
+                                      {item.categoryName}
+                                    </span>
+                                  )}
+                                  <span className="text-xs font-semibold text-gray-400">
+                                    {fmt(item.price)} c/u
+                                  </span>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => removeItem(item.id)}
+                                className="shrink-0 p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
 
-                {/* Recuperar datos por DNI */}
-                <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4">
-                  <p className="text-xs font-extrabold text-amber-800 uppercase tracking-wide mb-3">
-                    🔑 ¿Ya guardaste tus datos?
-                  </p>
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      value={dni}
-                      onChange={e => { setDni(e.target.value); setDniStatus(null) }}
-                      onKeyDown={e => e.key === 'Enter' && handleLookup()}
-                      placeholder="Ingresá tu DNI"
-                      className="flex-1 px-3.5 py-2.5 rounded-xl border border-amber-200 bg-white text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition-all"
-                    />
-                    <button
-                      onClick={handleLookup}
-                      className="shrink-0 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm rounded-xl transition-colors"
-                    >
-                      Buscar
-                    </button>
-                  </div>
+                            <div className="flex items-center justify-between border-t border-gray-50 pt-3">
+                              {/* Quantity Controls */}
+                              <div className="flex items-center gap-1 bg-gray-50 rounded-xl p-1 border border-gray-100">
+                                <button
+                                  onClick={() => updateQty(item.id, item.quantity - 1)}
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-600 hover:bg-white active:scale-90 transition-all font-bold text-sm"
+                                >
+                                  <Minus className="h-3.5 w-3.5" />
+                                </button>
+                                <span className="w-9 text-center font-extrabold text-gray-900 text-sm">{item.quantity}</span>
+                                <button
+                                  onClick={() => updateQty(item.id, item.quantity + 1)}
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-600 hover:bg-white active:scale-90 transition-all font-bold text-sm"
+                                >
+                                  <Plus className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
 
-                  {dniStatus === 'found' && (
-                    <div className="mt-2.5 flex items-center gap-2 text-emerald-700 text-xs font-semibold">
-                      <span className="w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center text-white text-[10px]">✓</span>
-                      ¡Datos recuperados! Revisá que estén correctos.
+                              <p className="font-black text-emerald-600 text-base">{fmt(subtotal.toString())}</p>
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
-                  )}
-                  {dniStatus === 'not-found' && (
-                    <p className="mt-2.5 text-amber-700 text-xs font-semibold">
-                      No encontramos datos guardados para este DNI.
-                    </p>
-                  )}
-                </div>
+                  </motion.div>
+                )}
 
-                {/* Formulario */}
-                <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 space-y-3.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base">📋</span>
-                    <p className="text-sm font-extrabold text-gray-800">Datos para la entrega</p>
-                  </div>
+                {step === 2 && (
+                  <motion.div
+                    key="step-2"
+                    initial={{ opacity: 0, x: isMovingForward ? 30 : -30 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: isMovingForward ? -30 : 30 }}
+                    transition={{ duration: 0.2 }}
+                    className="space-y-5"
+                  >
+                    {/* SECCIÓN CLUB ALENORT */}
+                    {user ? (
+                      /* Socio Logueado */
+                      <div className="bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 rounded-2xl p-4 text-white shadow-md flex items-center justify-between">
+                        <div>
+                          <span className="text-[9px] font-black uppercase tracking-widest bg-black/30 border border-white/10 px-2 py-0.5 rounded-full">
+                            Socio Club Alenort
+                          </span>
+                          <h4 className="font-extrabold text-sm mt-2">{user.nombre} {user.apellido}</h4>
+                          <p className="text-[10px] text-emerald-100 font-bold mt-0.5">
+                            Socio #{user.club_code} | Puntos: {user.points} pts
+                          </p>
+                        </div>
+                        <Trophy className="h-8 w-8 text-yellow-300 animate-pulse shrink-0" />
+                      </div>
+                    ) : (
+                      /* No Logueado: Promoción e Input Código */
+                      <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100 rounded-2xl p-4 shadow-sm space-y-3">
+                        <p className="text-xs font-bold text-amber-800 uppercase tracking-wide flex items-center gap-1.5 leading-none">
+                          <Trophy className="h-4 w-4 text-amber-500 shrink-0" /> ¿Sos socio del Club Alenort?
+                        </p>
+                        <p className="text-[11px] text-amber-700 leading-relaxed">
+                          Iniciá sesión para sumar puntos o ingresá tu código de 4 dígitos para cargar tus datos de entrega anteriores.
+                        </p>
+                        
+                        {/* Buscador de código de 4 dígitos */}
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            maxLength={4}
+                            value={clubCodeInput}
+                            onChange={e => { setClubCodeInput(e.target.value.replace(/\D/g, '')); setCodeSearchStatus(null) }}
+                            placeholder="Tu código de 4 dígitos"
+                            className="flex-1 px-3.5 py-2.5 rounded-xl border border-amber-200 bg-white text-xs font-mono font-bold tracking-widest text-center text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition-all shadow-sm"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleCodeLookup}
+                            disabled={codeSearchStatus === 'searching'}
+                            className="shrink-0 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs rounded-xl shadow-sm transition-colors flex items-center gap-1"
+                          >
+                            {codeSearchStatus === 'searching' ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Cargar'}
+                          </button>
+                        </div>
 
-                  <Field
-                    label="Nombre" placeholder="Ej: Juan Pérez" required
-                    value={customer.nombre}
-                    onChange={clearField('nombre')}
-                    error={errors.nombre}
-                  />
-                  <Field
-                    label="Celular" placeholder="Ej: 381 123-4567" required type="tel"
-                    value={customer.celular}
-                    onChange={clearField('celular')}
-                    error={errors.celular}
-                  />
-                  <Field
-                    label="Dirección" placeholder="Ej: Av. Belgrano 1234" required
-                    value={customer.direccion}
-                    onChange={clearField('direccion')}
-                    error={errors.direccion}
-                  />
-                  <Field
-                    label="Referencia" placeholder="Entre calles, local, piso…"
-                    value={customer.referencia}
-                    onChange={e => updateCustomer('referencia', e.target.value)}
-                    error={null}
-                  />
-
-                  {/* Guardar datos */}
-                  <label className="flex items-start gap-3 cursor-pointer pt-1">
-                    <div className="relative mt-0.5 shrink-0">
-                      <input
-                        type="checkbox"
-                        checked={saveData}
-                        onChange={e => setSaveData(e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-5 h-5 rounded-md border-2 border-gray-300 bg-white peer-checked:bg-amber-500 peer-checked:border-amber-500 transition-colors flex items-center justify-center">
-                        {saveData && (
-                          <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                          </svg>
+                        {codeSearchStatus === 'found' && loadedFromCodeUser && (
+                          <div className="flex items-center gap-1.5 text-emerald-700 text-xs font-bold animate-in fade-in">
+                            <CheckCircle2 className="w-4 h-4 shrink-0" />
+                            ¡Cargado! Socio #{loadedFromCodeUser.club_code} ({loadedFromCodeUser.nombre})
+                          </div>
                         )}
+                        {codeSearchStatus === 'not-found' && (
+                          <p className="text-red-600 text-[10px] font-bold">⚠️ Código no encontrado.</p>
+                        )}
+
+                        <div className="flex items-center justify-between pt-2.5 border-t border-amber-100/50 text-xs">
+                          <button
+                            type="button"
+                            onClick={() => openClubModal('login')}
+                            className="font-bold text-amber-700 hover:underline"
+                          >
+                            Iniciá sesión con DNI
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openClubModal('register')}
+                            className="font-black text-amber-600 hover:underline"
+                          >
+                            Creá tu cuenta gratis
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Formulario Datos Básicos */}
+                    <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-4 shadow-sm">
+                      <div className="flex items-center gap-2 pb-2 border-b border-gray-50">
+                        <User className="h-4 w-4 text-amber-500" />
+                        <p className="text-xs font-black uppercase tracking-wider text-gray-500">Datos personales</p>
+                      </div>
+
+                      {/* Nombre */}
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">
+                          Nombre Completo <span className="text-red-400">*</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={customer.nombre}
+                            onChange={(e) => handleFieldChange('nombre', e.target.value)}
+                            placeholder="Ej: Juan Pérez"
+                            className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 transition-all ${
+                              errors.nombre 
+                                ? 'border-red-300 focus:ring-red-200 bg-red-50' 
+                                : 'border-gray-200 focus:ring-amber-400 focus:border-amber-400 bg-white'
+                            }`}
+                          />
+                          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                            <User className="h-4 w-4" />
+                          </div>
+                        </div>
+                        {errors.nombre && <p className="text-red-500 text-xs mt-1 font-semibold">{errors.nombre}</p>}
+                      </div>
+
+                      {/* Celular */}
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">
+                          Celular de contacto <span className="text-red-400">*</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="tel"
+                            value={customer.celular}
+                            onChange={(e) => handleFieldChange('celular', e.target.value)}
+                            placeholder="Ej: 381 123-4567"
+                            className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 transition-all ${
+                              errors.celular 
+                                ? 'border-red-300 focus:ring-red-200 bg-red-50' 
+                                : 'border-gray-200 focus:ring-amber-400 focus:border-amber-400 bg-white'
+                            }`}
+                          />
+                          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                            <Phone className="h-4 w-4" />
+                          </div>
+                        </div>
+                        {errors.celular && <p className="text-red-500 text-xs mt-1 font-semibold">{errors.celular}</p>}
                       </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-gray-700">Guardar mis datos para la próxima vez</p>
-                      {saveData && !dni.trim() && (
-                        <p className="text-amber-600 text-xs mt-0.5 font-medium">Ingresá tu DNI arriba para guardar</p>
-                      )}
-                      {saveData && dni.trim() && (
-                        <p className="text-emerald-600 text-xs mt-0.5 font-medium">Se guardará con DNI {dni.trim()}</p>
-                      )}
+
+                    {/* Componente del Mapa y Dirección */}
+                    <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-4 shadow-sm">
+                      <div className="flex items-center gap-2 pb-2 border-b border-gray-50">
+                        <MapPin className="h-4 w-4 text-amber-500" />
+                        <p className="text-xs font-black uppercase tracking-wider text-gray-500">Ubicación de entrega</p>
+                      </div>
+
+                      <MapInput
+                        address={customer.direccion}
+                        onChangeAddress={(val) => handleFieldChange('direccion', val)}
+                        lat={customer.lat}
+                        lng={customer.lng}
+                        onChangeCoords={(la, ln) => {
+                          updateCustomer('lat', la)
+                          updateCustomer('lng', ln)
+                          if (errors.direccion) {
+                            setErrors(prev => ({ ...prev, direccion: null }))
+                          }
+                        }}
+                      />
+                      {errors.direccion && <p className="text-red-500 text-xs font-semibold">{errors.direccion}</p>}
+
+                      {/* Referencia */}
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">
+                          Referencia de entrega (Opcional)
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={customer.referencia}
+                            onChange={(e) => updateCustomer('referencia', e.target.value)}
+                            placeholder="Ej: Portón verde, entre San Martín y Chacabuco"
+                            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 bg-white transition-all"
+                          />
+                          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                            <FileText className="h-4 w-4" />
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </label>
+                  </motion.div>
+                )}
+
+                {step === 3 && (
+                  <motion.div
+                    key="step-3"
+                    initial={{ opacity: 0, x: isMovingForward ? 30 : -30 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: isMovingForward ? -30 : 30 }}
+                    transition={{ duration: 0.2 }}
+                    className="space-y-4"
+                  >
+                    <p className="text-xs font-extrabold text-gray-400 uppercase tracking-widest">Resumen de Entrega</p>
+                    
+                    {/* Resumen datos envío */}
+                    <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3.5 shadow-sm">
+                      <div className="flex items-start gap-3 text-sm">
+                        <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-500 shrink-0">
+                          <User className="h-4.5 w-4.5" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-gray-400 uppercase tracking-wide leading-none mb-1">Destinatario</p>
+                          <p className="font-extrabold text-gray-800">{customer.nombre}</p>
+                          <p className="text-xs font-medium text-gray-500 mt-0.5">{customer.celular}</p>
+                          {(user || loadedFromCodeUser) && (
+                            <span className="inline-block bg-emerald-50 text-emerald-700 text-[9px] font-black uppercase px-2 py-0.5 rounded-md mt-1.5 border border-emerald-100">
+                              ⭐ Socio Club Alenort: #{user?.club_code || loadedFromCodeUser?.club_code}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="w-full h-px bg-gray-50" />
+
+                      <div className="flex items-start gap-3 text-sm">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-500 shrink-0">
+                          <MapPin className="h-4.5 w-4.5" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-gray-400 uppercase tracking-wide leading-none mb-1">Dirección Seleccionada</p>
+                          <p className="font-extrabold text-gray-800">{customer.direccion}</p>
+                          {customer.referencia.trim() && (
+                            <p className="text-xs font-medium text-gray-500 mt-1 bg-gray-50 p-2 rounded-lg border border-gray-100">
+                              🏠 <span className="font-bold text-gray-600">Ref:</span> {customer.referencia}
+                            </p>
+                          )}
+                          <p className="text-[10px] text-amber-600 font-bold mt-1.5 flex items-center gap-1">
+                            📍 Pin GPS asignado ({customer.lat.toFixed(5)}, {customer.lng.toFixed(5)})
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="text-xs font-extrabold text-gray-400 uppercase tracking-widest mt-2">Productos ({count})</p>
+
+                    {/* Resumen productos */}
+                    <div className="bg-white rounded-2xl border border-gray-100 p-4 divide-y divide-gray-50 shadow-sm max-h-56 overflow-y-auto">
+                      {items.map(item => (
+                        <div key={item.id} className="py-2.5 first:pt-0 last:pb-0 flex items-center justify-between text-xs gap-3">
+                          <div className="min-w-0">
+                            <p className="font-bold text-gray-800 truncate">{item.name}</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">
+                              {item.quantity} × {fmt(item.price)} {item.unit ? `(${item.unit})` : ''}
+                            </p>
+                          </div>
+                          <p className="font-extrabold text-gray-800 shrink-0">
+                            {fmt((parseFloat(item.price || 0) * item.quantity).toString())}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Disclaimer de puntos */}
+                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-3.5">
+                      <p className="text-[11px] text-blue-800 font-medium leading-relaxed">
+                        {user || loadedFromCodeUser ? (
+                          `🎁 ¡Sumás puntos! Al confirmar tu compra, se acreditarán ${Math.floor(total / 10000)} puntos en tu cuenta Club Alenort (1 punto cada $10.000).`
+                        ) : (
+                          '💡 Tu pedido se enviará por WhatsApp. Si tuvieras cuenta Club Alenort, podrías sumar puntos con este pedido.'
+                        )}
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Footer con cálculo de importes y acciones */}
+            <div className="border-t border-gray-100 bg-white px-5 py-4 space-y-3 shrink-0 shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
+              {/* Resumen Financiero */}
+              <div className="space-y-1.5 text-xs font-semibold text-gray-500 bg-gray-50 border border-gray-100 rounded-2xl p-4">
+                <div className="flex items-center justify-between">
+                  <p>Subtotal de productos</p>
+                  <p className="text-gray-800 font-bold">{fmt(total.toString())}</p>
                 </div>
+                <div className="flex items-center justify-between">
+                  <p className="flex items-center gap-1 text-emerald-600 font-bold">
+                    <Truck className="h-3.5 w-3.5" /> Envío de entrega
+                  </p>
+                  <p className="text-emerald-600 font-bold uppercase">Gratis</p>
+                </div>
+                <div className="h-px bg-gray-200/60 my-2" />
+                <div className="flex items-center justify-between text-sm text-gray-900 font-black">
+                  <p>Total Estimado</p>
+                  <p className="text-lg text-emerald-700 tracking-tight font-extrabold">{fmt(total.toString())}</p>
+                </div>
+              </div>
 
+              {/* Botones de acción */}
+              <div className="flex gap-2">
+                {step > 1 && (
+                  <button
+                    type="button"
+                    onClick={handlePrevStep}
+                    disabled={submittingOrder}
+                    className="px-4 py-3.5 rounded-2xl border border-gray-200 hover:border-gray-300 text-gray-600 font-extrabold flex items-center justify-center transition-all bg-white hover:bg-gray-50 active:scale-95 shadow-sm disabled:opacity-50"
+                  >
+                    <ArrowLeft className="h-5 w-5" />
+                  </button>
+                )}
+
+                {step < 3 ? (
+                  <button
+                    type="button"
+                    onClick={handleNextStep}
+                    className="flex-1 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-extrabold py-3.5 rounded-2xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 text-sm active:scale-98"
+                  >
+                    Continuar
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={sendToWhatsApp}
+                    disabled={submittingOrder}
+                    className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-black py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2.5 text-base active:scale-[0.97] hover:scale-[1.01] disabled:opacity-50"
+                  >
+                    {submittingOrder ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5 shrink-0 fill-current" viewBox="0 0 24 24">
+                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                        </svg>
+                        Confirmar por WhatsApp
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
             </div>
-
-            {/* ── Footer ── */}
-            <div className="border-t border-gray-100 px-5 py-4 space-y-3 shrink-0">
-              <div className="flex items-center justify-between bg-gray-50 rounded-2xl px-4 py-3">
-                <p className="font-bold text-gray-600 text-sm">Total estimado</p>
-                <p className="font-extrabold text-gray-900 text-2xl tracking-tight">{fmt(total.toString())}</p>
-              </div>
-
-              <p className="text-xs text-gray-400 text-center leading-relaxed">
-                Los precios son orientativos. Confirmamos disponibilidad y precio final por WhatsApp.
-              </p>
-
-              <button
-                onClick={sendToWhatsApp}
-                className="w-full flex items-center justify-center gap-3 bg-green-500 hover:bg-green-600 active:bg-green-700 text-white font-bold py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 text-base"
-              >
-                <svg className="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                </svg>
-                Enviar pedido por WhatsApp
-              </button>
-
-              <button
-                onClick={clearCart}
-                className="w-full text-center text-xs text-gray-400 hover:text-red-500 transition-colors py-1 font-medium"
-              >
-                🗑 Limpiar carrito
-              </button>
-            </div>
-          </>
+          </div>
         )}
       </div>
     </>

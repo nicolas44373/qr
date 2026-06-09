@@ -4,7 +4,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 
 const CartContext = createContext(null)
 
-const emptyCustomer = { nombre: '', celular: '', direccion: '', referencia: '' }
+const emptyCustomer = { nombre: '', celular: '', direccion: '', referencia: '', lat: null, lng: null }
 
 export function CartProvider({ children }) {
   const [items, setItems]       = useState([])

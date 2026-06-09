@@ -16,14 +16,8 @@ const fmt = (price: string | null) => {
   return `$ ${n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
-const sinStock = (marca: string | null) => {
-  if (!marca) return false
-  const m = marca.toLowerCase()
-  return m.includes('sin stock') || m.includes('agotado')
-}
-
 export default function PriceListModal({ products, onClose }: Props) {
-  const available = products.filter(p => p.price && !sinStock(p.marca))
+  const available = products.filter(p => p.price && p.in_stock)
 
   const grouped = available.reduce((acc, p) => {
     const cat = p.category_name || 'Sin categoría'

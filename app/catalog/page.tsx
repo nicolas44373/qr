@@ -5,15 +5,16 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import WhatsAppFAB from '../components/WhatsAppFAB'
 import { useCart } from '../context/CartContext'
+import { motion, AnimatePresence } from 'framer-motion'
 
 type ProductRow = {
   id: number | string
   name: string
   price: string | null
-  price_per_kg: string | null
   unit: string | null
   category_id: number | string
   marca: string | null
+  in_stock?: boolean
   created_at: string
   updated_at: string
 }
@@ -25,11 +26,166 @@ const formatMoney = (value: string | null) => {
   return `$ ${num.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
+const ProductCard = ({
+  product,
+  qty,
+  hasPrice,
+  dm,
+  categoryName,
+  card,
+  txt,
+  sub,
+  onAdd,
+  onUpdateQty,
+  onOpenCart,
+}: {
+  product: ProductRow
+  qty: number
+  hasPrice: boolean
+  dm: boolean
+  categoryName: string | null
+  card: string
+  txt: string
+  sub: string
+  onAdd: () => void
+  onUpdateQty: (qty: number) => void
+  onOpenCart: () => void
+}) => {
+  const [effects, setEffects] = useState<{ id: number }[]>([])
+
+  const triggerEffect = () => {
+    const newId = Date.now() + Math.random()
+    setEffects(prev => [...prev, { id: newId }])
+    setTimeout(() => {
+      setEffects(prev => prev.filter(e => e.id !== newId))
+    }, 800)
+  }
+
+  const handleAdd = () => {
+    triggerEffect()
+    onAdd()
+  }
+
+  const handlePlus = () => {
+    triggerEffect()
+    onUpdateQty(qty + 1)
+  }
+
+  return (
+    <div className={`relative rounded-3xl border shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col ${card}`}>
+      {/* Absolute floating +1 bubbles */}
+      <AnimatePresence>
+        {effects.map(eff => {
+          const label = '📦 +1'
+          return (
+            <motion.span
+              key={eff.id}
+              initial={{ opacity: 0, y: 15, scale: 0.5 }}
+              animate={{ opacity: [0, 1, 1, 0], y: -75, scale: [0.8, 1.2, 1, 0.8], rotate: Math.random() * 20 - 10 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-amber-500 text-white font-black text-xs px-3 py-1.5 rounded-full shadow-lg border-2 border-white z-20 pointer-events-none select-none flex items-center gap-1 shrink-0"
+            >
+              {label}
+            </motion.span>
+          )
+        })}
+      </AnimatePresence>
+
+      {/* Stripe acento */}
+      <div className={`h-1.5 ${qty > 0 ? 'bg-gradient-to-r from-emerald-400 to-emerald-600' : 'bg-gradient-to-r from-amber-400 to-amber-500'}`} />
+
+      <div className="p-5 flex flex-col flex-1">
+        {/* Nombre */}
+        <h3 className={`font-extrabold text-sm sm:text-base leading-snug line-clamp-3 mb-2 min-h-[48px] ${txt}`}>
+          {product.name}
+        </h3>
+
+        {/* Marca */}
+        {product.marca && categoryName !== 'Rebozados' && (
+          <span className={`self-start text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full mb-3 shadow-sm ${
+            dm ? 'bg-gray-700 text-gray-300' : 'bg-amber-50 text-amber-700 border border-amber-100/80'
+          }`}>
+            {product.marca}
+          </span>
+        )}
+
+        {/* Precios */}
+        <div className="space-y-2 mb-4">
+          {product.price && (
+            <div className={`flex flex-col items-start justify-center rounded-2xl px-4 py-2 border transition-all ${
+              dm 
+                ? 'bg-emerald-950/40 border-emerald-900/40 text-emerald-300' 
+                : 'bg-emerald-50/80 border-emerald-100/60 text-emerald-800'
+            }`}>
+              <span className="text-[9px] font-extrabold uppercase tracking-widest opacity-80 mb-0.5">
+                Precio unidad
+              </span>
+              <span className="font-black text-lg sm:text-xl leading-none whitespace-nowrap">
+                {formatMoney(product.price)}
+              </span>
+            </div>
+          )}
+
+        </div>
+
+        {/* Unidad */}
+        {product.unit && (
+          <p className={`text-xs font-semibold mb-4 flex items-center gap-1 ${sub}`}>
+            📏 <span className="opacity-90">{product.unit}</span>
+          </p>
+        )}
+
+        {/* ── Controles carrito ── */}
+        {hasPrice && (
+          <div className="mt-auto pt-2">
+            {qty === 0 ? (
+              <button
+                onClick={handleAdd}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-extrabold text-sm transition-all shadow-md hover:shadow-lg active:scale-95 cursor-pointer"
+              >
+                <svg className="w-4 h-4 text-white stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
+                </svg>
+                Agregar al pedido
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => onUpdateQty(qty - 1)}
+                  className="w-10 h-10 rounded-xl border border-gray-200 flex items-center justify-center text-gray-600 hover:border-red-300 hover:text-red-500 hover:bg-red-50 active:scale-90 transition-all font-bold text-lg bg-white shrink-0 cursor-pointer"
+                >
+                  −
+                </button>
+                <div className="flex-1 text-center min-w-[30px]">
+                  <span className={`font-black text-lg ${txt}`}>{qty}</span>
+                </div>
+                <button
+                  onClick={handlePlus}
+                  className="w-10 h-10 rounded-xl border border-gray-200 flex items-center justify-center text-gray-600 hover:border-emerald-300 hover:text-emerald-600 hover:bg-emerald-50 active:scale-90 transition-all font-bold text-lg bg-white shrink-0 cursor-pointer"
+                >
+                  +
+                </button>
+                <button
+                  onClick={onOpenCart}
+                  className="px-3.5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-xs transition-colors shrink-0 flex items-center gap-1 shadow-sm active:scale-95 cursor-pointer"
+                >
+                  Ver pedido
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function CatalogContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const categoryId = searchParams.get('category')
-  const { addItem, updateQty, getQty, setIsOpen } = useCart()
+  const { addItem, updateQty, getQty, setIsOpen, count } = useCart()
 
   const [products, setProducts]       = useState<ProductRow[]>([])
   const [categoryName, setCategoryName] = useState<string | null>(null)
@@ -45,6 +201,7 @@ function CatalogContent() {
 
   useEffect(() => {
     localStorage.setItem('darkMode', JSON.stringify(darkMode))
+    window.dispatchEvent(new Event('theme-change'))
   }, [darkMode])
 
   useEffect(() => {
@@ -60,9 +217,10 @@ function CatalogContent() {
 
         const { data: prods, error: prodErr } = await supabase
           .from('products')
-          .select('id, name, price, price_per_kg, unit, marca, category_id')
+          .select('id, name, price, unit, marca, category_id, in_stock')
           .eq('category_id', categoryId)
-          .or('price.not.is.null,price_per_kg.not.is.null')
+          .eq('in_stock', true)
+          .not('price', 'is', null)
           .order('name')
         if (prodErr) throw prodErr
         setProducts((prods as ProductRow[]) || [])
@@ -100,8 +258,8 @@ function CatalogContent() {
   const txt  = dm ? 'text-white'  : 'text-gray-900'
   const sub  = dm ? 'text-gray-400' : 'text-gray-500'
 
-  /* ── Product Card ── */
-  const ProductCard = ({ product }: { product: ProductRow }) => {
+  /* ── Product Card Wrapper ── */
+  const ProductCardWrapper = ({ product }: { product: ProductRow }) => {
     const qty = getQty(product.id)
     const hasPrice = !!product.price
 
@@ -109,107 +267,26 @@ function CatalogContent() {
       addItem({
         id:           product.id,
         name:         product.name,
-        price:        product.price ?? product.price_per_kg ?? '0',
+        price:        product.price ?? '0',
         unit:         product.unit ?? undefined,
         categoryName: categoryName ?? undefined,
       })
     }
 
     return (
-      <div className={`rounded-2xl border shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col ${card}`}>
-        {/* Stripe acento */}
-        <div className={`h-1 ${qty > 0 ? 'bg-gradient-to-r from-emerald-400 to-green-500' : 'bg-gradient-to-r from-amber-400 to-orange-400'}`} />
-
-        <div className="p-4 flex flex-col flex-1">
-          {/* Nombre */}
-          <h3 className={`font-bold text-sm leading-snug line-clamp-2 mb-2 ${txt}`}>
-            {product.name}
-          </h3>
-
-          {/* Marca */}
-          {product.marca && categoryName !== 'Rebozados' && (
-            <span className={`self-start text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full mb-2 ${
-              dm ? 'bg-gray-700 text-gray-300' : 'bg-amber-50 text-amber-700 border border-amber-100'
-            }`}>
-              {product.marca}
-            </span>
-          )}
-
-          {/* Precios */}
-          <div className="space-y-2 mb-3">
-            {product.price && (
-              <div className={`flex items-center justify-between rounded-xl px-3 py-2 ${
-                dm ? 'bg-gray-700' : 'bg-emerald-50 border border-emerald-100'
-              }`}>
-                <span className={`text-[11px] font-bold uppercase tracking-wide ${dm ? 'text-gray-300' : 'text-emerald-700'}`}>
-                  Precio unidad
-                </span>
-                <span className={`font-extrabold text-base ${dm ? 'text-emerald-400' : 'text-emerald-700'}`}>
-                  {formatMoney(product.price)}
-                </span>
-              </div>
-            )}
-            {product.price_per_kg && (
-              <div className={`flex items-center justify-between rounded-xl px-3 py-2 ${
-                dm ? 'bg-gray-700' : 'bg-blue-50 border border-blue-100'
-              }`}>
-                <span className={`text-[11px] font-bold uppercase tracking-wide ${dm ? 'text-gray-300' : 'text-blue-700'}`}>
-                  Precio / kg
-                </span>
-                <span className={`font-extrabold text-base ${dm ? 'text-blue-400' : 'text-blue-700'}`}>
-                  {formatMoney(product.price_per_kg)}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Unidad */}
-          {product.unit && (
-            <p className={`text-xs mb-3 ${sub}`}>📐 {product.unit}</p>
-          )}
-
-          {/* ── Controles carrito ── */}
-          {hasPrice && (
-            <div className="mt-auto">
-              {qty === 0 ? (
-                <button
-                  onClick={handleAdd}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-bold text-sm transition-colors shadow-sm"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                  </svg>
-                  Agregar al pedido
-                </button>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => updateQty(product.id, qty - 1)}
-                    className="w-9 h-9 rounded-xl border border-gray-200 flex items-center justify-center text-gray-600 hover:border-red-300 hover:text-red-500 hover:bg-red-50 transition-colors font-bold text-lg bg-white"
-                  >
-                    −
-                  </button>
-                  <div className="flex-1 text-center">
-                    <span className="font-extrabold text-gray-900 text-lg">{qty}</span>
-                  </div>
-                  <button
-                    onClick={() => updateQty(product.id, qty + 1)}
-                    className="w-9 h-9 rounded-xl border border-gray-200 flex items-center justify-center text-gray-600 hover:border-emerald-300 hover:text-emerald-600 hover:bg-emerald-50 transition-colors font-bold text-lg bg-white"
-                  >
-                    +
-                  </button>
-                  <button
-                    onClick={() => setIsOpen(true)}
-                    className="flex-1 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs transition-colors"
-                  >
-                    Ver pedido
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+      <ProductCard
+        product={product}
+        qty={qty}
+        hasPrice={hasPrice}
+        dm={dm}
+        categoryName={categoryName}
+        card={card}
+        txt={txt}
+        sub={sub}
+        onAdd={handleAdd}
+        onUpdateQty={(newQty) => updateQty(product.id, newQty)}
+        onOpenCart={() => setIsOpen(true)}
+      />
     )
   }
 
@@ -289,15 +366,47 @@ function CatalogContent() {
             </button>
 
             {/* Botón carrito */}
-            <button
-              onClick={() => setIsOpen(true)}
-              className="relative flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm px-3 py-2 rounded-xl transition-colors shadow-sm"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-              <span className="hidden sm:inline">Mi pedido</span>
-            </button>
+            <div className="relative shrink-0">
+              {count > 0 && (
+                <span className="absolute inset-0 rounded-xl bg-amber-500/30 animate-ping pointer-events-none" style={{ animationDuration: '2s' }} />
+              )}
+              <motion.button
+                key={`catalog-cart-${count}`}
+                animate={count > 0 ? {
+                  scale: [1, 1.1, 0.95, 1],
+                  y: [0, -4, 2, 0]
+                } : {}}
+                transition={{ duration: 0.4, ease: "easeInOut" }}
+                onClick={() => setIsOpen(true)}
+                className="relative flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm px-3 py-2 rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer shrink-0"
+              >
+                <motion.div
+                  key={count}
+                  animate={count > 0 ? { rotate: [0, -10, 10, -10, 10, 0], scale: [1, 1.1, 1] } : {}}
+                  transition={{ duration: 0.4 }}
+                  className="shrink-0"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </motion.div>
+                <span className="hidden sm:inline font-extrabold">Mi pedido</span>
+                <AnimatePresence>
+                  {count > 0 && (
+                    <motion.span
+                      key={count}
+                      initial={{ scale: 0.4, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.4, opacity: 0 }}
+                      transition={{ duration: 0.3, type: 'spring', stiffness: 500, damping: 15 }}
+                      className="absolute -top-1.5 -right-1.5 w-5.5 h-5.5 bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-md border border-white"
+                    >
+                      {count > 99 ? '99+' : count}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </motion.button>
+            </div>
           </div>
         </div>
       </div>
@@ -354,15 +463,15 @@ function CatalogContent() {
                         <p className={`text-xs ${sub}`}>{list.length} producto{list.length !== 1 ? 's' : ''}</p>
                       </div>
                     </div>
-                    <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                      {list.map(p => <ProductCard key={p.id} product={p} />)}
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                      {list.map(p => <ProductCardWrapper key={p.id} product={p} />)}
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {products.map(p => <ProductCard key={p.id} product={p} />)}
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {products.map(p => <ProductCardWrapper key={p.id} product={p} />)}
               </div>
             )}
           </>

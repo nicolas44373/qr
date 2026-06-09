@@ -10,6 +10,7 @@ export type ProductPayload = {
   unit?: string
   category_id: string
   marca?: string | null
+  in_stock?: boolean
 }
 
 export type Product = {
@@ -19,7 +20,24 @@ export type Product = {
   unit: string | null
   category_id: number
   marca: string | null
+  in_stock: boolean
   category_name: string
+}
+
+export function applyRounding(price: number, rule: string): number {
+  switch (rule) {
+    case 'integer':
+      return Math.round(price)
+    case '10':
+      return Math.round(price / 10) * 10
+    case '50':
+      return Math.round(price / 50) * 50
+    case '100':
+      return Math.round(price / 100) * 100
+    case 'none':
+    default:
+      return Math.round(price * 100) / 100
+  }
 }
 
 export function useProducts() {
@@ -34,7 +52,7 @@ export function useProducts() {
       const [{ data: productsData }, { data: categoriesData }] = await Promise.all([
         supabase
           .from('products')
-          .select('id, name, price, unit, category_id, marca, categories(name)')
+          .select('id, name, price, unit, category_id, marca, in_stock, categories(name)')
           .order('name'),
         supabase.from('categories').select('id, name').order('name')
       ])
@@ -48,6 +66,7 @@ export function useProducts() {
             unit: p.unit,
             category_id: p.category_id,
             marca: p.marca,
+            in_stock: p.in_stock !== false, // default to true if null
             category_name: p.categories?.name || ''
           }))
         )
@@ -67,15 +86,22 @@ export function useProducts() {
   const addProduct = async (payload: ProductPayload) => {
     try {
       setSubmitting(true)
-      const { error } = await supabase.from('products').insert([
-        {
-          name: payload.name,
-          price: payload.price !== '' ? payload.price : null,
-          unit: payload.unit || null,
-          category_id: Number(payload.category_id),
-          marca: payload.marca || null
-        }
-      ])
+      const cat = categories.find(c => String(c.id) === String(payload.category_id))
+      const isRebozados = cat ? cat.name.toLowerCase() === 'rebozados' : false
+
+      const insertData: any = {
+        name: payload.name,
+        price: payload.price !== '' ? payload.price : null,
+        unit: payload.unit || null,
+        category_id: Number(payload.category_id),
+        marca: payload.marca || null,
+        in_stock: payload.in_stock !== false
+      }
+      if (isRebozados) {
+        insertData.price_per_kg = null
+      }
+
+      const { error } = await supabase.from('products').insert([insertData])
       if (error) throw error
       await loadAll()
       return { success: true }
@@ -90,15 +116,24 @@ export function useProducts() {
   const updateProduct = async (id: number | string, payload: ProductPayload) => {
     try {
       setSubmitting(true)
+      const cat = categories.find(c => String(c.id) === String(payload.category_id))
+      const isRebozados = cat ? cat.name.toLowerCase() === 'rebozados' : false
+
+      const updateData: any = {
+        name: payload.name,
+        price: payload.price !== '' ? payload.price : null,
+        unit: payload.unit || null,
+        category_id: Number(payload.category_id),
+        marca: payload.marca || null,
+        in_stock: payload.in_stock !== false
+      }
+      if (isRebozados) {
+        updateData.price_per_kg = null
+      }
+
       const { error } = await supabase
         .from('products')
-        .update({
-          name: payload.name,
-          price: payload.price !== '' ? payload.price : null,
-          unit: payload.unit || null,
-          category_id: Number(payload.category_id),
-          marca: payload.marca || null
-        })
+        .update(updateData)
         .eq('id', id)
       if (error) throw error
       await loadAll()
@@ -106,6 +141,68 @@ export function useProducts() {
     } catch (error: any) {
       console.error(error)
       return { success: false, error: error.message || 'Error' }
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const toggleStock = async (id: number | string, currentStock: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ in_stock: !currentStock })
+        .eq('id', id)
+      if (error) throw error
+
+      setProducts(prev =>
+        prev.map(p => (p.id === id ? { ...p, in_stock: !currentStock } : p))
+      )
+      return { success: true }
+    } catch (error: any) {
+      console.error('Error toggling stock:', error)
+      return { success: false, error: error.message || 'Error al cambiar stock' }
+    }
+  }
+
+  const bulkUpdatePrices = async (productIds: number[], percentage: number, roundingRule: string) => {
+    try {
+      setSubmitting(true)
+      const selectedProducts = products.filter(p => productIds.includes(p.id))
+
+      const updates = selectedProducts
+        .map(p => {
+          if (!p.price) return null
+          const currentPrice = parseFloat(p.price)
+          if (isNaN(currentPrice)) return null
+
+          const factor = 1 + percentage / 100
+          const newPrice = applyRounding(currentPrice * factor, roundingRule)
+
+          return {
+            id: p.id,
+            price: String(newPrice)
+          }
+        })
+        .filter(Boolean) as { id: number; price: string }[]
+
+      const chunkSize = 15
+      for (let i = 0; i < updates.length; i += chunkSize) {
+        const chunk = updates.slice(i, i + chunkSize)
+        await Promise.all(
+          chunk.map(item =>
+            supabase
+              .from('products')
+              .update({ price: item.price })
+              .eq('id', item.id)
+          )
+        )
+      }
+
+      await loadAll()
+      return { success: true, updatedCount: updates.length }
+    } catch (error: any) {
+      console.error(error)
+      return { success: false, error: error.message || 'Error en actualización masiva' }
     } finally {
       setSubmitting(false)
     }
@@ -133,6 +230,8 @@ export function useProducts() {
     submitting,
     addProduct,
     updateProduct,
+    toggleStock,
+    bulkUpdatePrices,
     deleteProduct
   }
 }
