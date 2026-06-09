@@ -6,7 +6,7 @@ import ClientWrapper from "./components/ClientWrapper"
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" })
 
 export const metadata: Metadata = {
-  title: "Alenort",
+  title: "Alenort - Catalogo mayorista",
   description: "Catálogo mayorista de Alenort",
 }
 
