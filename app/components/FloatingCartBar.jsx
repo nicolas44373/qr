@@ -39,7 +39,7 @@ export default function FloatingCartBar() {
         animate={{ y: 0, opacity: 1, scale: 1 }}
         exit={{ y: 100, opacity: 0, scale: 0.95 }}
         transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-        className="fixed bottom-6 left-6 right-24 z-30 md:hidden"
+        className="fixed bottom-6 left-6 right-6 z-30 md:hidden"
       >
         <button
           onClick={() => setIsOpen(true)}
@@ -49,9 +49,9 @@ export default function FloatingCartBar() {
               : 'bg-white/95 border-amber-200 text-gray-900 hover:bg-amber-50/50'
           }`}
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             {/* Cart Icon with pulsing aura */}
-            <div className="relative">
+            <div className="relative shrink-0">
               <span className="absolute inset-0 rounded-xl bg-amber-500/30 animate-ping pointer-events-none" />
               <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center text-white shadow-md relative z-10">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -71,17 +71,19 @@ export default function FloatingCartBar() {
               </motion.span>
             </div>
 
-            <div>
-              <p className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+            <div className="min-w-0">
+              <p className={`text-[10px] font-bold uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis ${
+                isDark ? 'text-gray-400' : 'text-gray-500'
+              }`}>
                 Mi Pedido ({count} {count === 1 ? 'item' : 'items'})
               </p>
-              <p className="font-extrabold text-sm mt-0.5">Ver pedido</p>
+              <p className="font-extrabold text-sm mt-0.5 whitespace-nowrap">Ver pedido</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-base font-black text-amber-500">{formatMoney(total)}</span>
-            <svg className="w-4 h-4 text-amber-500 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-base font-black text-amber-500 whitespace-nowrap">{formatMoney(total)}</span>
+            <svg className="w-4 h-4 text-amber-500 stroke-[3] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
             </svg>
           </div>
