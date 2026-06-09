@@ -9,6 +9,7 @@ import ProductFilters from './components/ProductFilters'
 import ProductForm from './components/ProductForm'
 import ProductsTable from './components/ProductsTable'
 import LoadingScreen from './components/LoadingScreen'
+import PriceListModal from './components/PriceListModal'
 
 type Toast = { message: string; type: 'success' | 'error' } | null
 type ConfirmDel = { id: number | string; name: string } | null
@@ -21,6 +22,7 @@ export default function AdminPage() {
   const [editFormData, setEditFormData]   = useState<any>({ ...emptyForm })
   const [toast, setToast]                 = useState<Toast>(null)
   const [confirmDel, setConfirmDel]       = useState<ConfirmDel>(null)
+  const [showPriceList, setShowPriceList] = useState(false)
 
   const { products, categories, loading, submitting, addProduct, updateProduct, deleteProduct } = useProducts()
   const { selectedCategory, setSelectedCategory, searchTerm, setSearchTerm, filteredProducts } = useProductFilters(products)
@@ -158,6 +160,15 @@ export default function AdminPage() {
             />
           </div>
           <button
+            onClick={() => setShowPriceList(true)}
+            className="shrink-0 flex items-center justify-center gap-2 bg-white hover:bg-gray-50 active:bg-gray-100 border border-gray-200 text-gray-700 px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Lista de Precios
+          </button>
+          <button
             onClick={handleShowAdd}
             disabled={submitting}
             className="shrink-0 flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-colors"
@@ -177,6 +188,13 @@ export default function AdminPage() {
           editingId={editingProduct}
         />
       </main>
+
+      {showPriceList && (
+        <PriceListModal
+          products={products}
+          onClose={() => setShowPriceList(false)}
+        />
+      )}
     </div>
   )
 }
